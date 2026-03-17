@@ -1,10 +1,10 @@
 🚧🚧🚧🚧🚧🚧🚧🚧
 
+⭐️ This library is specifically for Data Science projects, it is designed so code is built in jupyter notebooks, then integrate to run from a main.py. 
+
+- For example, if were building out the Transformer model, I'd use notebooks to code out the sub-layers of the model, then use a main.py to integrate all notebooks.
+
 # TODO
-
-Code out parts of the code in juyper notebooks, and easily intergrate them into a larger code base: https://gemini.google.com/app/93150fb38ed50976
-
-This library is specifically designed to code out parts of code in jupyter notebooks, than putting it all together. JupyText doesn't quick do this.
 
 **Things that this library should resolve:**
 
