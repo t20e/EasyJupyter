@@ -1,8 +1,8 @@
 🚧🚧🚧🚧🚧🚧🚧🚧
 
-⭐️ This library is specifically for Data Science projects, it is designed so code is built in jupyter notebooks, then integrate to run from a main.py. 
+⭐️ This library is specifically for Data Science projects. It is designed so that code is built in Jupyter notebooks, then integrated into main.py. 
 
-- For example, if were building out the Transformer model, I'd use notebooks to code out the sub-layers of the model, then use a main.py to integrate all notebooks.
+- For example, if I were building out the Transformer model, I'd use notebooks to code out the sub-layers of the model, then use a main.py to integrate all notebooks.
 
 # TODO
 
