@@ -9,6 +9,7 @@ import atexit
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from .loader import EasyJupyterLoader
+from . import is_watcher_running
 
 # Cache and PID paths
 PROJECT_ROOT = os.getcwd()
@@ -22,12 +23,18 @@ class AutoSyncHandler(FileSystemEventHandler):
             loader = EasyJupyterLoader(event.src_path)
             loader.get_code()
 
+
 def cleanup_pid():
     """Remove the PID file when the watcher shuts down."""
     if os.path.exists(PID_FILE):
         os.remove(PID_FILE)
 
+
 def start_daemon():
+    if is_watcher_running():
+        return
+    
+    os.makedirs(SHADOW_DIR, exist_ok=True)
     
     # Write the current process PID to the lock file
     with open(PID_FILE, "w") as f:
@@ -47,6 +54,7 @@ def start_daemon():
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
+
 
 if __name__ == "__main__":
     start_daemon()

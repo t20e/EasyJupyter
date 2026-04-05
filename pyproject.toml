@@ -16,3 +16,6 @@ dependencies = [
 
 [project.scripts]
 easyjupyter = "EasyJupyter.cli:main"
+
+[tool.setuptools]
+packages = ["EasyJupyter"]

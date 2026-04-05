@@ -2,52 +2,84 @@
 
 🚧🚧🚧🚧🚧🚧🚧🚧 ‼️  Library not ready yet! 🚧🚧🚧🚧🚧🚧🚧🚧
 
-⭐️ This library is specifically for Data Science projects. It is designed so that code is built in Jupyter notebooks, then integrated into main.py.
+⭐️ This library is designed so that code can be integrated from Jupyter Notebooks into Python projects or other Notebooks.
 
-- For example, if I were building out the Transformer model (from Attention Is All You Need), I'd use notebooks to code out the sub-layers of the model, then use a main.py to integrate all notebooks.
+- For example, if I were building out the Transformer model (from Attention Is All You Need), I'd use notebooks to code out layers of the model, then use a main.py to integrate all notebooks.
 
-## 💡 Ignore Notebook Commands
+Benefits:
 
-- *These lines are skipped when converting from notebook to regular python code. (i.e., they wont run in your final executable)*
+- Native GitHub Rendering: Keep your code in notebooks so plots and markdown render natively on GitHub.
+- Zero Clutter: Transformed Python files are stored in a hidden `.easyJupyter_cache` directory, keeping your workspace clean.
+- Custom ignore syntax to ignore exploratory cells, or lines of code.
+  
+## Ignore Notebook Commands
 
-- Markdown cells are ignored by default.
-    - **#TODO: maybe use `# %%` instead**
-- **Ignore an entire cell**:
+Use these commands inside your notebooks to control what gets compiled into the cache file.
+
+- **Markdown Cells:** Ignored by default.
+- **Ignore An Entire Cell:**
   - Add `# @i-c` to the very top of the cell.
-- **Ignore one line**:
+- **Ignore One Line In A Cell:**
   - Add `# @i-l` above the line you want to ignore.
 
+## Getting Started
 
-## How It Is Automated
+### Installation & Initial Sync
 
-1. User installs the library
+First, install the library, then run the sync command to generate the cache files for any existing notebooks.
+
+```bash
+pip install -e .
+easyjupyter --sync
+```
+
+### Usage
+
+🚨 In your project's entry point (eg., main.py), or in a notebook (if its importing code from another notebook or a script), import the library at the very top of the file:
+
+```python
+import EasyJupyter
+from my_notebook import Class, Function_name
+```
+
+How It Works: The moment EasyJupyter is imported, it spawns a detached background daemon watcher. Every time you save a notebook, the daemon instantly updates the corresponding hidden cache file.
+
+### Cache Cleanup
+
+If you rename, move, or delete a notebook, the old cache file will remain in the hidden cache directory. To clean up the cache, run:
+
+```bash
+easyjupyter --clean
+```
+
+### VSC Pylance Intellisense Setup
+
+VS Code's Pylance intellisense will not work with notebooks, or the hidden cache files generated for the notebooks. But you can tell it where to look for the cache files. Run one of the following commands in the root of your project:
+
+1. If you don't have a `.vscode/settings.json` file yet, run:
+
     ```bash
-    pip install -e .
-    easyjupyter --sync # Start the watcher daemon, only needed once when installing, and every other time you start coding the project. #TODO fix wording
+    mkdir -p .vscode && echo '{
+        "python.analysis.extraPaths": [
+            "./.easyJupyter_cache"
+        ]
+    }' > .vscode/settings.json
     ```
-2. **Use:** They simply put import EasyJupyter at the very top of their main_example.py.
-   - The moment they import EasyJupyter, a cache directory is created, and spawns a detached watcher daemon to monitor for notebook changes, which is then synced to  the corresponding cache file.
-3. How to make **VSC**'s Pylance intellisense work with EasyJupyter.
-    - We need to create a `.vscode/settings.json` file. Use the following commands:
 
-        -# TODO if they have an existing .vscode/settings.json file, this will overwrite it!
-        ```bash
-        # ⚠️ In the root of your project.
-        mkdir -p .vscode && echo '{
-            "python.analysis.extraPaths": [
-                "./.easyJupyter_cache"
-            ]
-        }' > .vscode/settings.json
-        ```
+2. If you already have a `.vscode/settings.json` file, add the following to it:
 
+    ```json
+    {
+        "python.analysis.extraPaths": [
+            "./.easyJupyter_cache"
+        ]
+    }
+    ```
 
+### Other
 
-## Other
+If any issues occur with the watcher daemon, manually run it with: `python -m EasyJupyter.watcher` (note that this only spawns the daemon in the foreground), or check the logs in `.easyJupyter_cache/watcher.log`.
 
-- Github rederning
-- No file clutter
-- Custom ignore syntax
+#### Not For You
 
-- **#TODO** add info here about the `--cleanup` argument!
-
-- **#TODO** add info here tell user to run the watcher!
+- Dev note: when updating the daemon, run `kill $(cat .easyJupyter_cache/watcher.pid)` to kill the old daemon, or `pkill -f EasyJupyter.watcher`.

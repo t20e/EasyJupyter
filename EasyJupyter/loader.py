@@ -8,7 +8,6 @@ import linecache
 import importlib.abc
 import importlib.util
 import traceback
-import atexit
 from rich.console import Console
 from rich.panel import Panel
 from rich.theme import Theme
@@ -34,20 +33,39 @@ custom_theme = Theme(
 console = Console(theme=custom_theme)
 
 
-# TODO this clean up deletes the whole cache dir instead of just a couple files!
 def cleanup_cache():
     """
-    If user renames or deletes a notebook, also delete its cache file
-
-    Run with: `python EasyJupyter.py --clean`
+    If user moves, renames or deletes a notebook, also delete its cache file.
+        Run with: `easyjupyter --clean`
     """
-    if os.path.exists(EasyJupyterLoader.SHADOW_DIR):
-        shutil.rmtree(EasyJupyterLoader.SHADOW_DIR)
-        console.print(
-            f"[bold red]🗑️  Cache cleared:[/bold red] {EasyJupyterLoader.SHADOW_DIR}"
-        )
+    if not os.path.exists(EasyJupyterLoader.SHADOW_DIR):
+        console.print("[yellow]No cache directory found.[/yellow]")
+        return
+    
+    removed_count = 0
+
+    for root, dirs, files in os.walk(EasyJupyterLoader.SHADOW_DIR, topdown=False):
+        for f in files:
+            if f.endswith(".py"):
+                cache_file_path = os.path.join(root, f)
+
+                # Reconstruct original notebook path
+                rel_to_cache = os.path.relpath(cache_file_path, EasyJupyterLoader.SHADOW_DIR)
+                og_nb_path = os.path.join(EasyJupyterLoader.PROJECT_ROOT, rel_to_cache.replace(".py", ".ipynb"))
+
+                if not os.path.exists(og_nb_path):
+                    os.remove(cache_file_path)
+                    console.print(f"[bold red]🗑️  Cache cleared:[/bold red] {rel_to_cache}")
+                    removed_count += 1
+        
+        # Clean up empty directories
+        if not os.listdir(root) and root != EasyJupyterLoader.SHADOW_DIR:
+            os.rmdir(root)
+    
+    if removed_count > 0:
+        console.print(f"[bold green]Cache cleaned:[/bold green] {removed_count} files removed.")
     else:
-        console.print("[yellow]No cache found to clear.[/yellow]")
+        console.print("[yellow]Cache is okay, no need to clean.[/yellow]")
 
 
 def sync_all():
@@ -72,13 +90,32 @@ def sync_all():
         console.print("[bold green]Sync Complete![/bold green]")
     else:
         console.print("[yellow]No notebooks updated![/yellow]")
+    
+    print_nb_update_report()
 
 
 def print_nb_update_report():
     if not UPDATED_NOTEBOOKS:
         return
 
-    # TODO compress filenames for nested files, they are to long example: .easyJupyter_cache/shadow_tes
+    # Check if we should write to a log file instead of terminal
+    # We can detect the daemon by checking if our PID matches the watcher.pid file
+    log_path = os.path.join(EasyJupyterLoader.SHADOW_DIR, "watcher.log")
+    
+    # If the log file exists and we are likely the daemon, log to file
+    # Otherwise, if it's a manual sync or main script, print to console
+    target_console = console
+    
+    # If we want to FORCE the daemon's output to the log:
+    if os.path.exists(log_path):
+        with open(log_path, "a") as f:
+            file_console = Console(file=f, theme=custom_theme, force_terminal=True)
+            _render_table(file_console)
+    else:
+        _render_table(console)
+
+
+def _render_table(output_console):
     table = Table(
         title="Notebook Updates",
         title_style="label",
@@ -94,20 +131,30 @@ def print_nb_update_report():
 
         table.add_row(nb_rel_path, shadow_path)
 
-    console.print(table)
+    output_console.print(table)
 
 
-atexit.register(print_nb_update_report)
 
 
 class NB_finder(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
         # Look for the notebook ile in the expected path
         mod_name = fullname.split(".")[-1]
-        search_paths = path or [os.getcwd()]
+
+        # Use python's native sys.path for top-level imports
+        search_paths = path or sys.path
 
         # Search for the notebook
         for p in search_paths:
+
+            # When importing `import EasyJupyter` in a notebook, IPython/Jupyter uses an empty string ("") to denote the current working directory
+            if p == "":
+                p = os.getcwd()
+
+            # Ensure the path is valid string/directory no zip files
+            if not isinstance(p, str) or not os.path.isdir(p):
+                continue
+
             nb_path = os.path.join(p, f"{mod_name}.ipynb")
             if os.path.exists(nb_path):
                 return importlib.util.spec_from_file_location(
@@ -187,7 +234,6 @@ class EasyJupyterLoader(importlib.abc.Loader):
         nb_rel_path = os.path.relpath(self.path, self.PROJECT_ROOT)
         shadow_rel_path = os.path.relpath(shadow_path, self.PROJECT_ROOT)
 
-        # TODO call update here
         UPDATED_NOTEBOOKS.append((nb_rel_path, shadow_rel_path))
 
     def transform_notebook(self):
@@ -293,11 +339,4 @@ class EasyJupyterLoader(importlib.abc.Loader):
             )
         )
 
-        # TODO: Add a verbose flag, for example if the error occured in Pytorch, my error above wont show it, the line below shows the full traceback for the last resort debug
-        # traceback.print_exc()
-
         sys.exit(1)
-
-
-# register the hook
-sys.meta_path.insert(0, NB_finder())
