@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "EasyJupyter"
+version = "0.1"
+description = "Seamlessly integrate Jupyter Notebooks into Python execution."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "nbformat",
+    "watchdog",
+    "rich", 
+]
+
+[project.scripts]
+easyjupyter = "EasyJupyter.cli:main"

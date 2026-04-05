@@ -3,3 +3,6 @@
 __pycache__
 .vscode
 .DS_Store
+
+EasyJupyter.egg-info
+*.egg-info/

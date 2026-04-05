@@ -15,8 +15,6 @@ from rich.theme import Theme
 from rich.table import Table
 import json
 import time
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 import shutil
 import argparse
 from rich.progress import track
@@ -24,7 +22,6 @@ from rich.progress import track
 VSC_SETTINGS_UPDATED = False
 UPDATED_NOTEBOOKS = []  # Track what notebooks the user has updated
 
-# TODO when i add "python.analysis.extraPaths": ["./typings"] for VSC intellisense, make sure to tell user to do that both in the repo, and when they first run the code, to check if first time running, check if the cache folder exists~
 
 # Rich library theme
 custom_theme = Theme(
@@ -53,55 +50,15 @@ def cleanup_cache():
         console.print("[yellow]No cache found to clear.[/yellow]")
 
 
-def add_to_vsc_settings(SHADOW_DIR: str):
-    """
-    Add `"python.analysis.extraPaths": ["./.easyJupyter_cache"]` to ".vscode/settings.json" so VSC's Pylance intellisense works with imported notebooks.
-
-    Arg:
-        SHADOW_DIR: ".easyJupyter_cache"
-
-    """
-    vscode_dir = os.path.join(os.getcwd(), ".vscode")
-    settings_path = os.path.join(vscode_dir, "settings.json")
-    vsc_path = f"./{SHADOW_DIR}"
-
-    if not os.path.exists(vscode_dir):
-        os.makedirs(vscode_dir)
-
-    # TODO wont this run for every notebook, it should only run once, if .easyJupyter_cache hasn't been created yet, or just check if the setting is in settings.json
-    settings = {}
-    if os.path.exists(settings_path):
-        try:
-            with open(settings_path, "r") as f:
-                settings = json.load(f)
-        except json.JSONDecodeError:
-            settings = {}
-
-    extra_paths = settings.get("python.analysis.extraPaths", [])
-
-    if vsc_path not in extra_paths:
-        extra_paths.append(vsc_path)
-        settings["python.analysis.extraPaths"] = extra_paths
-
-        with open(settings_path, "w") as f:
-            json.dump(settings, f, indent=4)
-
-        print(
-            "Added `'python.analysis.extraPaths': ['.easyJupyter_cache']` setting to .vscode/settings.json"
-        )
-
-
 def sync_all():
     """
-    When user updates a Notebook sync it to its cache file
+    When user updates a Notebook sync it to its cache file.
     """
     global UPDATED_NOTEBOOKS
     root_dir = "."
-
-    # clear list
-    UPDATED_NOTEBOOKS = []
-
+    UPDATED_NOTEBOOKS = []  # clear list
     all_nb = []
+
     for root, _, files in os.walk(root_dir):
         if EasyJupyterLoader.SHADOW_DIR in root:
             continue  # skip the cache dir
@@ -164,39 +121,37 @@ class EasyJupyterLoader(importlib.abc.Loader):
 
     IGNORE_CELL_SYNTAX = "# @i-c"
     IGNORE_LINE = "# @i-l"
-    PROJECT_ROOT = os.path.abspath(os.curdir)
-    SHADOW_DIR = ".easyJupyter_cache"
+    PROJECT_ROOT = os.getcwd()
+    SHADOW_DIR = os.path.join(PROJECT_ROOT, ".easyJupyter_cache")
 
     def __init__(self, path):
         self.path = path
 
+    def _get_shadow_path(self):
+        """Mirrors the source directory structure into the cache directory."""
+        rel_path = os.path.relpath(self.path, self.PROJECT_ROOT)
+        shadow_rel = rel_path.replace(".ipynb", ".py")
+        return os.path.join(self.SHADOW_DIR, shadow_rel)
+
     def create_module(self, spec):
         """Import the notebook as a module"""
-
-        global VSC_SETTINGS_UPDATED
-
-        # Append shadow path to sys.path for jupyter lab, #TODO test if this is needed
-        if self.SHADOW_DIR not in sys.path:
-            sys.path.append(os.path.abspath(self.SHADOW_DIR))
-
-        if not VSC_SETTINGS_UPDATED:
-            add_to_vsc_settings(self.SHADOW_DIR)
-            VSC_SETTINGS_UPDATED = True
-
         return types.ModuleType(spec.name)
 
     def exec_module(self, module):
+        # if the file is 'models/layers/attention.ipynb', we want the package to be 'models.layers'
+        path_parts = os.path.normpath(self.path).split(os.sep)
+        # remove extension and join with '.'
+        rel_path = os.path.relpath(self.path, self.PROJECT_ROOT)
+        package_parts = os.path.dirname(rel_path).split(os.sep)
+        pkg_path = ".".join([p for p in package_parts if p])
 
-        # Check if we already transformed the notebook, and it has not been updated since.
+        # Set the attributes
+        module.__file__ = os.path.abspath(self.path)
+        module.__package__ = pkg_path
+
+        # Execute with code in the module's namespace
         code = self.get_code()
 
-        # Handle relative imports and metadata
-        module.__file__ = self.path
-        # Use spec.parent to set the package for relative imports
-        if hasattr(module, "__spec__"):
-            module.__package__ = module.__spec__.parent
-
-        # Execute with error interception
         try:
             exec(code, module.__dict__)
         except Exception as e:
@@ -204,11 +159,7 @@ class EasyJupyterLoader(importlib.abc.Loader):
 
     def get_code(self):
         """Returns code from cache if it has not been updated since"""
-        py_cache_filename = os.path.basename(self.path).replace(".ipynb", ".py")
-        shadow_path = os.path.join(self.SHADOW_DIR, py_cache_filename)
-
-        if not os.path.exists(self.SHADOW_DIR):  # Ensure cache dir exists
-            os.makedirs(self.SHADOW_DIR)
+        shadow_path = self._get_shadow_path()
 
         # Check timestamps
         if os.path.exists(shadow_path):
@@ -224,14 +175,9 @@ class EasyJupyterLoader(importlib.abc.Loader):
         return self.transform_notebook()
 
     def write_shadow_ref(self, code):
-        """Create a shadow_{notebook_filename} to store the transformed contents of a notebook"""
-
-        # Ensure hidden cache dir exists
-        if not os.path.exists(self.SHADOW_DIR):
-            os.makedirs(self.SHADOW_DIR)
-
-        py_cache_filename = os.path.basename(self.path).replace(".ipynb", ".py")
-        shadow_path = os.path.join(self.SHADOW_DIR, py_cache_filename)
+        """Create a shadow Python file to store the transformed contents of a notebook."""
+        shadow_path = self._get_shadow_path()
+        os.makedirs(os.path.dirname(shadow_path), exist_ok=True)
 
         # Write the shadow file
         with open(shadow_path, "w") as f:
@@ -239,13 +185,14 @@ class EasyJupyterLoader(importlib.abc.Loader):
 
         # Print to show what notebooks were updated
         nb_rel_path = os.path.relpath(self.path, self.PROJECT_ROOT)
+        shadow_rel_path = os.path.relpath(shadow_path, self.PROJECT_ROOT)
 
         # TODO call update here
-        UPDATED_NOTEBOOKS.append((nb_rel_path, shadow_path))
+        UPDATED_NOTEBOOKS.append((nb_rel_path, shadow_rel_path))
 
     def transform_notebook(self):
         """
-        Parse a notebook: Comes as JSON and apply ignore syntax.
+        Parse a notebook into its shadow Python cache file. The notebook comes as JSON and apply ignore syntax.
         """
 
         with open(self.path, "r") as f:
@@ -354,65 +301,3 @@ class EasyJupyterLoader(importlib.abc.Loader):
 
 # register the hook
 sys.meta_path.insert(0, NB_finder())
-
-
-# Start a watch to check for notebook changes and sync it to its cache file
-# Run: `python EasyJupyter.py`
-if __name__ == "__main__":
-
-    # TODO tell user about the clean up argument
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--clean", action="store_true", help="Wipe the cache folder")
-    args = parser.parse_args()
-
-    if args.clean:
-        cleanup_cache()
-        sys.exit(0)
-
-    class NoteBookHandler(FileSystemEventHandler):
-        def on_modified(self, event):
-            # When notebook is modified
-            if (
-                event.src_path.endswith(".ipynb")
-                and EasyJupyterLoader.SHADOW_DIR not in event.src_path
-            ):
-                nb_rel_path = os.path.relpath(
-                    event.src_path, EasyJupyterLoader.PROJECT_ROOT
-                )
-                py_cache_filename = os.path.basename(event.src_path).replace(
-                    ".ipynb", ".py"
-                )
-                shadow_path = os.path.join(
-                    EasyJupyterLoader.SHADOW_DIR, py_cache_filename
-                )
-
-                console.print(
-                    f"[default] Changes detected in:[/default] [path]{nb_rel_path}[/path]  | Updating cache at: [path]{shadow_path} [/path]"
-                )
-                # Sync the notebook and its cache
-                loader = EasyJupyterLoader(event.src_path)
-                loader.get_code()
-
-    # Initial sync
-    sync_all()
-
-    # Start a background process to watch for notebook changes
-    observer = Observer()
-    observer.schedule(NoteBookHandler(), path=".", recursive=True)
-    observer.start()
-
-    console.print(
-        Panel(
-            "[bold green]👀 EasyJupyter is now watching your project![/bold green]\n"
-            "Your cache and IntelliSense will update automatically on save.\n"
-            "[dim]Press Ctrl+C to stop the watcher.[/dim]",
-            border_style="green",
-        )
-    )
-
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
-    observer.join()
