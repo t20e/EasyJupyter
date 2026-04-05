@@ -44,13 +44,23 @@ from my_notebook import Class, Function_name
 
 How It Works: The moment EasyJupyter is imported, it spawns a detached background daemon watcher. Every time you save a notebook, the daemon instantly updates the corresponding hidden cache file.
 
-### Cache Cleanup
+### Arguments
 
-If you rename, move, or delete a notebook, the old cache file will remain in the hidden cache directory. To clean up the cache, run:
+#### Cache Cleanup
 
-```bash
-easyjupyter --clean
-```
+- If you rename, move, or delete a notebook, the old cache file will remain in the hidden cache directory. To clean up the cache, run:
+
+    ```bash
+    easyjupyter --clean
+    ```
+
+#### Watch Daemon Logs
+
+- If you incorrectly use EasyJupyter in a notebook (e.g., redundant ignore comments), warnings will be added to the cache file of the notebook, so that when you run your program as a whole, the warnings are printed to the console. However, if you are only using notebooks you wont be able to see these warnings, so to view the active warning logs, run:
+
+    ```bash
+    easyjupyter --watch
+    ```
 
 ### VSC Pylance Intellisense Setup
 
@@ -82,4 +92,11 @@ If any issues occur with the watcher daemon, manually run it with: `python -m Ea
 
 #### Not For You
 
-- Dev note: when updating the daemon, run `kill $(cat .easyJupyter_cache/watcher.pid)` to kill the old daemon, or `pkill -f EasyJupyter.watcher`.
+- Dev note:
+  - When updating the daemon, we need to clear the old cache and restart the daemon.
+
+    ```bash
+    pkill -f EasyJupyter.watcher
+    rm -rf .easyJupyter_cache
+    easyjupyter --sync
+    ```

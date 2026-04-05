@@ -48,7 +48,7 @@ def register_hook():
             log_file = open(log_path, "a")
 
             subprocess.Popen(
-                [sys.executable, "-m", "EasyJupyter.watcher"],
+                [sys.executable, "-u", "-m", "EasyJupyter.watcher"],
                 stdin=subprocess.DEVNULL,
                 stdout=log_file,  # Route logs to the hidden cache folder
                 stderr=subprocess.STDOUT,

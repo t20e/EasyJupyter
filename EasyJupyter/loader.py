@@ -1,10 +1,8 @@
 import types
 import nbformat
 import sys
-from types import ModuleType
 import os
 import sys
-import linecache
 import importlib.abc
 import importlib.util
 import traceback
@@ -14,9 +12,8 @@ from rich.theme import Theme
 from rich.table import Table
 import json
 import time
-import shutil
-import argparse
 from rich.progress import track
+import datetime
 
 VSC_SETTINGS_UPDATED = False
 UPDATED_NOTEBOOKS = []  # Track what notebooks the user has updated
@@ -41,7 +38,7 @@ def cleanup_cache():
     if not os.path.exists(EasyJupyterLoader.SHADOW_DIR):
         console.print("[yellow]No cache directory found.[/yellow]")
         return
-    
+
     removed_count = 0
 
     for root, dirs, files in os.walk(EasyJupyterLoader.SHADOW_DIR, topdown=False):
@@ -50,20 +47,29 @@ def cleanup_cache():
                 cache_file_path = os.path.join(root, f)
 
                 # Reconstruct original notebook path
-                rel_to_cache = os.path.relpath(cache_file_path, EasyJupyterLoader.SHADOW_DIR)
-                og_nb_path = os.path.join(EasyJupyterLoader.PROJECT_ROOT, rel_to_cache.replace(".py", ".ipynb"))
+                rel_to_cache = os.path.relpath(
+                    cache_file_path, EasyJupyterLoader.SHADOW_DIR
+                )
+                og_nb_path = os.path.join(
+                    EasyJupyterLoader.PROJECT_ROOT,
+                    rel_to_cache.replace(".py", ".ipynb"),
+                )
 
                 if not os.path.exists(og_nb_path):
                     os.remove(cache_file_path)
-                    console.print(f"[bold red]🗑️  Cache cleared:[/bold red] {rel_to_cache}")
+                    console.print(
+                        f"[bold red]🗑️  Cache cleared:[/bold red] {rel_to_cache}"
+                    )
                     removed_count += 1
-        
+
         # Clean up empty directories
         if not os.listdir(root) and root != EasyJupyterLoader.SHADOW_DIR:
             os.rmdir(root)
-    
+
     if removed_count > 0:
-        console.print(f"[bold green]Cache cleaned:[/bold green] {removed_count} files removed.")
+        console.print(
+            f"[bold green]Cache cleaned:[/bold green] {removed_count} files removed."
+        )
     else:
         console.print("[yellow]Cache is okay, no need to clean.[/yellow]")
 
@@ -90,7 +96,7 @@ def sync_all():
         console.print("[bold green]Sync Complete![/bold green]")
     else:
         console.print("[yellow]No notebooks updated![/yellow]")
-    
+
     print_nb_update_report()
 
 
@@ -101,16 +107,18 @@ def print_nb_update_report():
     # Check if we should write to a log file instead of terminal
     # We can detect the daemon by checking if our PID matches the watcher.pid file
     log_path = os.path.join(EasyJupyterLoader.SHADOW_DIR, "watcher.log")
-    
+
     # If the log file exists and we are likely the daemon, log to file
-    # Otherwise, if it's a manual sync or main script, print to console
-    target_console = console
-    
-    # If we want to FORCE the daemon's output to the log:
+    # Otherwise, if it's a manual sync or main script, print to console.
+    # For the log file, we'll use a plain text format.
     if os.path.exists(log_path):
         with open(log_path, "a") as f:
-            file_console = Console(file=f, theme=custom_theme, force_terminal=True)
-            _render_table(file_console)
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"\n[{timestamp}] Notebook Updates:\n")
+            for nb_rel_path, shadow_path in UPDATED_NOTEBOOKS:
+                f.write(f"  - Notebook: {nb_rel_path}\n")
+                f.write(f"    Cache:    {shadow_path}\n")
+            f.write("\n")
     else:
         _render_table(console)
 
@@ -126,14 +134,9 @@ def _render_table(output_console):
     table.add_column("Cache Updated At", style="cell_location", width=45)
 
     for nb_rel_path, shadow_path in UPDATED_NOTEBOOKS:
-
-        display_nb = (nb_rel_path[:42] + "..") if len(nb_rel_path) > 44 else nb_rel_path
-
         table.add_row(nb_rel_path, shadow_path)
 
     output_console.print(table)
-
-
 
 
 class NB_finder(importlib.abc.MetaPathFinder):
@@ -238,11 +241,34 @@ class EasyJupyterLoader(importlib.abc.Loader):
 
     def transform_notebook(self):
         """
-        Parse a notebook into its shadow Python cache file. The notebook comes as JSON and apply ignore syntax.
+        Parse a notebook into its shadow Python cache file. The notebook comes as JSON and apply ignore syntax. Handles OS write locks/race conditions.
         """
 
-        with open(self.path, "r") as f:
-            notebook = nbformat.read(f, as_version=4)
+        max_retries = 5
+        retry_delay = 0.1
+
+        for attempt in range(max_retries):
+            try:
+                with open(self.path, "r") as f:
+                    contents = f.read()
+                    if not contents.strip():
+                        # File is empty, wait and try again
+                        time.sleep(retry_delay)
+                        continue
+
+                    notebook = nbformat.reads(contents, as_version=4)
+                    break  # success
+            except (nbformat.reader.NotJSONError, json.JSONDecodeError):
+                # File is not JSON, wait and try again
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                raise  # Re-raise if it still fails after max retries
+        else:
+            # This executes if the loop finishes without raising 'break'
+            raise Exception(
+                f"Failed to read notebook: {self.path} after {max_retries} attempts."
+            )
 
         nb_cells = notebook["cells"]
         nb_metadata = notebook["metadata"]
@@ -264,34 +290,97 @@ class EasyJupyterLoader(importlib.abc.Loader):
             exec_code_extract.append(f"# CELL {cell_idx} | ID: {cell.id}")
             exec_code_extract.append(f"# {'='*64}")
 
-            if cell.cell_type != "code" or any(
-                l.strip().startswith(self.IGNORE_CELL_SYNTAX) for l in lines
-            ):
+            # --- Warning detection for IGNORE_CELL_SYNTAX ---
+            ignore_cell_syntax_count = 0
+            ignore_line_syntax_count = 0
+            first_ignore_cell_line = -1
+
+            for line_idx, line in enumerate(lines):
+                clean_line = line.strip()
+                if clean_line.startswith(self.IGNORE_CELL_SYNTAX):
+                    ignore_cell_syntax_count += 1
+                    if first_ignore_cell_line == -1:
+                        first_ignore_cell_line = line_idx
+                elif clean_line.startswith(self.IGNORE_LINE):
+                    ignore_line_syntax_count += 1
+
+            if ignore_cell_syntax_count > 1:
+                warnings.append(
+                    f"Cell {cell_idx}: Redundant '{self.IGNORE_CELL_SYNTAX}' stacked."
+                )
+
+            if ignore_cell_syntax_count > 0:
+                for i in range(first_ignore_cell_line):
+                    if lines[i].strip() != "":
+                        warnings.append(
+                            f"Cell {cell_idx}: '{self.IGNORE_CELL_SYNTAX}' is not at the very top of the cell. The entire cell will still be ignored."
+                        )
+                        break
+
+                if ignore_line_syntax_count > 0:
+                    warnings.append(
+                        f"Cell {cell_idx}: Contains both '{self.IGNORE_CELL_SYNTAX}' and '{self.IGNORE_LINE}'. The line ignore is redundant since the entire cell is ignored."
+                    )
+            # --- End warning detection ---
+
+            # --- Cell processing logic ---
+            if cell.cell_type != "code" or ignore_cell_syntax_count > 0:
+                # If it's a markdown cell or an ignored code cell
                 for line in lines:
                     exec_code_extract.append(f"# [Ignored Cell] {line}")
             else:
                 # Process lines
                 skip_next = False
-                for line in lines:
+                for line_idx, line in enumerate(lines):
                     clean = line.strip()
 
                     # If this line is a trigger, comment it out and prepare to skip the next line
                     if clean.startswith(self.IGNORE_LINE):
+                        if skip_next:
+                            warnings.append(
+                                f"Cell {cell_idx} (0-indexed) line {line_idx+1}: Redundant '{self.IGNORE_LINE}' stacked."
+                            )
                         exec_code_extract.append(f"# {line}")
                         skip_next = True
                         continue  # Move to next line
 
-                    # If skip_next si active, comment this line out and reset skip, this is to catch redundant skip lines stacked on top of each other
-                    elif skip_next:  # TODO ADD WARNING
+                    # If skip_next is active, comment this line out and reset skip, this is to catch redundant skip lines stacked on top of each other
+                    elif skip_next:
+                        if clean == "":
+                            warnings.append(
+                                f"Cell {cell_idx} (0-indexed) line {line_idx+1}: '{self.IGNORE_LINE}' used before an empty line."
+                            )
                         exec_code_extract.append(f"# [skip line] {line}")
                         skip_next = False
                     else:  # Regular code to execute line
                         exec_code_extract.append(line)
 
+                # Check if the cell ended with a skip trigger but had no code to actually skip
+                if skip_next:
+                    warnings.append(
+                        f"Cell {cell_idx} (0-indexed): '{self.IGNORE_LINE}' used at the end of the cell with no code to skip."
+                    )
+
             exec_code_extract.append("")  # Add a next line
 
-        final_code = "\n".join(exec_code_extract)
+        # Inject warnings into the generated code so the user sees them when executing
+        if warnings:
+            warning_imports = ["import warnings"]
+            warning_imports.append(
+                f'print("\\n\\n🚨🚨🚨 Incorrect use of EasyJupyter, warnings listed below, remember to fix the warnings below in the notebook, and not in this file!\\n\\n")'
+            )
 
+            for w in warnings:
+                safe_w = w.replace('"', '\\"')
+                warning_imports.append(
+                    f'warnings.warn("EasyJupyter: {safe_w}\\n", UserWarning)'
+                )
+                # Also write to watcher.log
+                print(f"[WARNING] {os.path.basename(self.path)} - {w}")
+
+            exec_code_extract = warning_imports + [""] + exec_code_extract
+
+        final_code = "\n".join(exec_code_extract)
         self.write_shadow_ref(final_code)
 
         # Return final code to exec
