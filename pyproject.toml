@@ -22,7 +22,7 @@ repository = "https://github.com/t20e/EasyJupyter"
 "Issues" = "https://github.com/t20e/EasyJupyter/issues"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.12"
 nbformat = "*"
 rich = "*"
 watchdog = "*"

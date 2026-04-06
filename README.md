@@ -1,7 +1,5 @@
 # EasyJupyter
 
-🚧🚧🚧🚧🚧🚧🚧🚧 ‼️  Library not ready yet! 🚧🚧🚧🚧🚧🚧🚧🚧
-
 EasyJupyter allows you to seamlessly integrate your Jupyter Notebook code into Python projects or other notebooks. It transforms your notebooks into reusable modules, enabling you to leverage their interactive development environment while maintaining their native display for documentation and collaboration.
 
 Benefits:
