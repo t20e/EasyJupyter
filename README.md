@@ -100,4 +100,4 @@ If any issues occur with the watcher daemon, manually run it with: `python -m Ea
 
 - Install locally: `pip install -e .`
 - Distributing to PyPI:
-  - Releases are completely automated via GitHub Actions *(CI/CD)*. To publish a new release, tag a commit with the new version number (e.g., `git tag 0.1.2` and `git push --tags`), or do it in Github Desktop. The workflow will automatically bump the version, build the package, and publish it!
+  - Releases are automated via GitHub Actions *(CI/CD)*. To publish a new release, tag a commit with the new version number (e.g., `git tag 0.1.2` and `git push --tags`), or do it in Github Desktop.

@@ -12,7 +12,6 @@ on:
 env:
     PACKAGE_NAME: "EasyJupyter"
     OWNER: "t20e"
-    # TAP_NAME: "<TAP_NAME>" #TODO what is this?
 
 jobs: # Each job runs on a VM
     # Extracts the version and suffix from the tag
@@ -80,7 +79,7 @@ jobs: # Each job runs on a VM
             - name: Set up Python
               uses: actions/setup-python@v5
               with:
-                  python-version: "3.14"
+                  python-version: "3.12"
 
             - name: Install Poetry
               run: |
@@ -92,7 +91,7 @@ jobs: # Each job runs on a VM
                   poetry version ${{ needs.details.outputs.new_version }}
 
             - name: Install dependencies
-              run: poetry install --sync --no-interaction
+              run: poetry sync --no-interaction
 
             - name: Build source and wheel distribution
               run: |
