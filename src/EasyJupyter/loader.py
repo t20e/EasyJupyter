@@ -276,7 +276,6 @@ class EasyJupyterLoader(importlib.abc.Loader):
         nb_nbformat_minor = notebook["nbformat_minor"]
 
         # Warnings to tell user if they used a skip line syntax but it has an empty line below it, or other warnings
-        # TODO add all warnings checks possible
         warnings = []
 
         # Extract code to execute from the notebook

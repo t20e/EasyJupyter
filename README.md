@@ -2,7 +2,7 @@
 
 🚧🚧🚧🚧🚧🚧🚧🚧 ‼️  Library not ready yet! 🚧🚧🚧🚧🚧🚧🚧🚧
 
-⭐️ #TODO fix this wording, has to be a better way to say this -> This library is designed so that code can be integrated from Jupyter Notebooks into Python projects or other Notebooks, or just work with notebooks that you want to be displayed as notebooks.
+EasyJupyter allows you to seamlessly integrate your Jupyter Notebook code into Python projects or other notebooks. It transforms your notebooks into reusable modules, enabling you to leverage their interactive development environment while maintaining their native display for documentation and collaboration.
 
 Benefits:
 
@@ -33,14 +33,14 @@ easyjupyter --sync
 
 ### Usage
 
-🚨 In your project's entry point (eg., main.py), or in a notebook (if its importing code from another notebook or a script), import the library at the very top of the file:
+🚨 In your project's entry point (e.g., main.py), or in a notebook, import the library at the very top of the file:
 
 ```python
 import EasyJupyter
 from my_notebook import Class, Function_name
 ```
 
-How It Works: The moment EasyJupyter is imported, it spawns a detached background daemon watcher. Every time you save a notebook, the daemon instantly updates the corresponding hidden cache file.
+**How It Works:** When EasyJupyter is first imported and run, it initiates a single, detached background daemon. This daemon then continuously monitors your notebooks, instantly updating their hidden cache files every time you save. This design ensures efficient resource use, as only one daemon operates at a time. If the daemon is not already running (e.g., after a system restart or a period of inactivity), a new one will be automatically started when EasyJupyter is imported again.
 
 ### Arguments
 
@@ -88,20 +88,16 @@ VS Code's Pylance intellisense will not work with notebooks, or the hidden cache
 
 If any issues occur with the watcher daemon, manually run it with: `python -m EasyJupyter.watcher` (note that this only spawns the daemon in the foreground), or check the logs in `.easyJupyter_cache/watcher.log`.
 
-#### Not For You
+#### Not For You | Dev Notes
 
-- Dev Notes:
-  - When updating the daemon, we need to clear the old cache and restart the daemon.
+- When updating the daemon, we need to clear the old cache and restart the daemon.
 
-    ```bash
-    pkill -f EasyJupyter.watcher
-    rm -rf .easyJupyter_cache
-    easyjupyter --sync
-    ```
+ ```bash
+ pkill -f EasyJupyter.watcher
+ rm -rf .easyJupyter_cache
+ easyjupyter --sync
+ ```
 
-  - Install locally: `pip install -e .`
-  - Distributing (requirements, build and twine):
-    1. Increment the version number in `pyproject.toml`
-    2. Delete build artifacts: `rm -rf dist/ src/EasyJupyter.egg-info/`
-    3. Build the dist with `python -m build`
-    4. Publish to PYPI (pip) with `twine upload --config-file .pypirc dist/*` using the `.pypirc` file in the root of the project.
+- Install locally: `pip install -e .`
+- Distributing to PyPI:
+  - Releases are completely automated via GitHub Actions *(CI/CD)*. To publish a new release, tag a commit with the new version number (e.g., `git tag 0.1.2` and `git push --tags`), or do it in Github Desktop. The workflow will automatically bump the version, build the package, and publish it!

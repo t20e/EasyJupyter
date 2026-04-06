@@ -1,31 +1,29 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
+[tool.poetry]
 name = "EasyJupyter"
-version = "0.1.1"
-description = "Integrate code from Jupyter Notebooks directly into Python projects while retaining native GitHub rendering."
+version = "0.1.0" # This is a required field, but no need to change it for releases, as tagging will be used for version!
+description = "EasyJupyter allows you to seamlessly integrate your Jupyter Notebook code into Python projects or other notebooks. It transforms your notebooks into reusable modules, enabling you to leverage their interactive development environment while maintaining their native display for documentation and collaboration."
 readme = "README.md"
-requires-python = ">=3.8"
-license = {text = "MIT"}
-authors = [
-  {name = "Tony Avis"}
-]
+license = "MIT"
+authors = ["Tony Avis"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
-dependencies = [
-    "nbformat",
-    "rich",
-    "watchdog"
-]
+repository = "https://github.com/t20e/EasyJupyter"
 
-[project.urls]
-Repository = "https://github.com/t20e/EasyJupyter"
-Issues = "https://github.com/t20e/EasyJupyter/issues"
+[tool.poetry.urls]
+"Issues" = "https://github.com/t20e/EasyJupyter/issues"
 
-[project.scripts]
+[tool.poetry.dependencies]
+python = "^3.8"
+nbformat = "*"
+rich = "*"
+watchdog = "*"
+
+[tool.poetry.scripts]
 # This maps the 'easyjupyter' terminal command to the main() function in cli.py
 easyjupyter = "EasyJupyter.cli:main"
