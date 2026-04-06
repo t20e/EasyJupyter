@@ -99,3 +99,21 @@ If any issues occur with the watcher daemon, manually run it with: `python -m Ea
 - Install locally: `pip install -e .`
 - Distributing to PyPI:
   - Releases are automated via GitHub Actions *(CI/CD)*. To publish a new release, tag a commit with the new version number (e.g., `git tag 0.1.2` and `git push --tags`), or do it in Github Desktop.
+  - **Note:** If you make any changes to `pyproject.toml` (like adding dependencies), you must run `poetry lock` and commit the updated `poetry.lock` file before tagging the release, otherwise the automated build will fail!
+
+  - Testing Releases Locally (on TestPyPI):
+    1.  First-Time Setup:
+        - Create an API token on TestPyPI. Note: https://pypi.org/ and https://test.pypi.org/ are not the same, have a different login for each!
+        - Configure Poetry with the repository URL and your token:
+          ```bash
+          # 1. Tell Poetry where TestPyPI is
+          poetry config repositories.testpypi https://test.pypi.org/legacy/
+          # 2. Provide your token for authentication
+          poetry config pypi-token.testpypi <paste-your-testpypi-token-here>
+          ```
+    1.  Before Each Test Release:
+        - Ensure your `poetry.lock` is up-to-date: `poetry lock`
+        - Check for errors: `poetry check`
+        - Build the package: `poetry build`
+    2.  Publish to TestPyPI:
+        - `poetry publish -r testpypi`
