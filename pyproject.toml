@@ -13,6 +13,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
+packages = [ # Tell poetry where to find the source code
+    { include = "EasyJupyter", from = "src" }
+]
 repository = "https://github.com/t20e/EasyJupyter"
 
 [tool.poetry.urls]
