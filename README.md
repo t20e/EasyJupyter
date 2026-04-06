@@ -2,14 +2,12 @@
 
 🚧🚧🚧🚧🚧🚧🚧🚧 ‼️  Library not ready yet! 🚧🚧🚧🚧🚧🚧🚧🚧
 
-⭐️ This library is designed so that code can be integrated from Jupyter Notebooks into Python projects or other Notebooks.
-
-- For example, if I were building out the Transformer model (from Attention Is All You Need), I'd use notebooks to code out layers of the model, then use a main.py to integrate all notebooks.
+⭐️ #TODO fix this wording, has to be a better way to say this -> This library is designed so that code can be integrated from Jupyter Notebooks into Python projects or other Notebooks, or just work with notebooks that you want to be displayed as notebooks.
 
 Benefits:
 
 - Native GitHub Rendering: Keep your code in notebooks so plots and markdown render natively on GitHub.
-- Zero Clutter: Transformed Python files are stored in a hidden `.easyJupyter_cache` directory, keeping your workspace clean.
+- Zero Clutter: Generated cache files are stored in a hidden `.easyJupyter_cache` directory, keeping your workspace clean.
 - Custom ignore syntax to ignore exploratory cells, or lines of code.
   
 ## Ignore Notebook Commands
@@ -29,7 +27,7 @@ Use these commands inside your notebooks to control what gets compiled into the 
 First, install the library, then run the sync command to generate the cache files for any existing notebooks.
 
 ```bash
-pip install -e .
+pip install easyjupyter
 easyjupyter --sync
 ```
 
@@ -92,7 +90,7 @@ If any issues occur with the watcher daemon, manually run it with: `python -m Ea
 
 #### Not For You
 
-- Dev note:
+- Dev Notes:
   - When updating the daemon, we need to clear the old cache and restart the daemon.
 
     ```bash
@@ -100,3 +98,10 @@ If any issues occur with the watcher daemon, manually run it with: `python -m Ea
     rm -rf .easyJupyter_cache
     easyjupyter --sync
     ```
+
+  - Install locally: `pip install -e .`
+  - Distributing (requirements, build and twine):
+    1. Increment the version number in `pyproject.toml`
+    2. Delete build artifacts: `rm -rf dist/ src/EasyJupyter.egg-info/`
+    3. Build the dist with `python -m build`
+    4. Publish to PYPI (pip) with `twine upload --config-file .pypirc dist/*` using the `.pypirc` file in the root of the project.

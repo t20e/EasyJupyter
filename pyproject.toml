@@ -4,18 +4,28 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "EasyJupyter"
-version = "0.1"
-description = "Seamlessly integrate Jupyter Notebooks into Python execution."
+version = "0.1.1"
+description = "Integrate code from Jupyter Notebooks directly into Python projects while retaining native GitHub rendering."
 readme = "README.md"
 requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+  {name = "Tony Avis"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "nbformat",
-    "watchdog",
-    "rich", 
+    "rich",
+    "watchdog"
 ]
 
-[project.scripts]
-easyjupyter = "EasyJupyter.cli:main"
+[project.urls]
+Repository = "https://github.com/t20e/EasyJupyter"
+Issues = "https://github.com/t20e/EasyJupyter/issues"
 
-[tool.setuptools]
-packages = ["EasyJupyter"]
+[project.scripts]
+# This maps the 'easyjupyter' terminal command to the main() function in cli.py
+easyjupyter = "EasyJupyter.cli:main"
