@@ -9,12 +9,10 @@ import atexit
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from .loader import EasyJupyterLoader
-from . import is_watcher_running
+from . import PROJECT_ROOT, SHADOW_DIR, is_watcher_running
 import datetime
 
 # Cache and PID paths
-PROJECT_ROOT = os.getcwd()
-SHADOW_DIR = os.path.join(PROJECT_ROOT, ".easyJupyter_cache")
 PID_FILE = os.path.join(SHADOW_DIR, "watcher.pid")
 
 
@@ -51,6 +49,8 @@ def cleanup_pid():
 
 def start_daemon():
     if is_watcher_running():
+        print(f"Watcher daemon is already running! (See PID file: {PID_FILE})")
+        print("If you want to restart it manually, please stop the current background process or delete the PID file.")
         return
     
     os.makedirs(SHADOW_DIR, exist_ok=True)
@@ -66,7 +66,7 @@ def start_daemon():
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] DEBUG: Watchdog daemon starting.")
     observer = Observer()
-    observer.schedule(AutoSyncHandler(), path=".", recursive=True)
+    observer.schedule(AutoSyncHandler(), path=PROJECT_ROOT, recursive=True)
     observer.start()
 
     try:

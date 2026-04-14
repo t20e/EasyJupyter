@@ -1,0 +1,7 @@
+{
+    "python.analysis.extraPaths": [
+        "./.easyJupyter_cache"
+    ],
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda"
+}

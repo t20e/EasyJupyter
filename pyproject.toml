@@ -2,31 +2,35 @@
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+[project]
 name = "EasyJupyter"
-version = "0.1.2" # NOTE: This is a required field, leave it as is, no need to change it, the Github workflow will automatically take care of version using the tag you set for commits!
-description = "EasyJupyter allows you to seamlessly integrate your Jupyter Notebook code into Python projects or other notebooks. It transforms your notebooks into reusable modules, enabling you to leverage their interactive development environment while maintaining their native display for documentation and collaboration."
-readme = "README.md"
-license = "MIT"
-authors = ["Tony Avis"]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
-]
-packages = [ # Tell poetry where to find the source code
-    { include = "EasyJupyter", from = "src" }
-]
-repository = "https://github.com/t20e/EasyJupyter"
+version = "0.1.4" # NOTE: This is a required field, leave it as is, no need to change it, the Github workflow will automatically take care of version using the tag you set for commits!
 
-[tool.poetry.urls]
+description = "EasyJupyter allows you to effortlessly integrate your Jupyter Notebook code into any Python project or other notebooks."
+readme = "README.md"
+
+license = "MIT" 
+authors = [{ name = "Tony Avis" }]
+
+requires-python = ">=3.12"
+dynamic = ["classifiers"] # allow Poetry to automatically add Python version tags
+
+dependencies = [
+    "nbformat",
+    "rich",
+    "watchdog",
+]
+
+[project.urls]
+"Repository" = "https://github.com/t20e/EasyJupyter"
 "Issues" = "https://github.com/t20e/EasyJupyter/issues"
 
-[tool.poetry.dependencies]
-python = "^3.12"
-nbformat = "*"
-rich = "*"
-watchdog = "*"
-
-[tool.poetry.scripts]
+[project.scripts]
 # This maps the 'easyjupyter' terminal command to the main() function in cli.py
 easyjupyter = "EasyJupyter.cli:main"
+
+[tool.poetry]
+packages = [
+    # Tell poetry where to find the source code
+    { include = "EasyJupyter", from = "src" },
+]

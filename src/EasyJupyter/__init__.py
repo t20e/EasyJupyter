@@ -1,15 +1,31 @@
 import sys
 import os
-from .loader import NB_finder
-import threading
 import subprocess
+from rich.console import Console
+from rich.theme import Theme
+from .utils import get_project_root
 
+# Define global variables
+VSC_SETTINGS_UPDATED = False
+UPDATED_NOTEBOOKS = []  # Keep track of what notebooks the user has updated
+PROJECT_ROOT = get_project_root()
+SHADOW_DIR = os.path.join(PROJECT_ROOT, ".easyJupyter_cache")
 
 # Cache and PID paths
-PROJECT_ROOT = os.getcwd()
-SHADOW_DIR = os.path.join(PROJECT_ROOT, ".easyJupyter_cache")
 PID_FILE = os.path.join(SHADOW_DIR, "watcher.pid")
 
+# Rich library theme
+custom_theme = Theme(
+    {
+        "label": "bold default",
+        "path": "cyan",
+        "cell_location": "yellow",
+    }
+)
+console = Console(theme=custom_theme)
+
+# Import NB_finder after above variables are defined to avoid circular imports!
+from .loader import NB_finder
 
 def is_watcher_running():
     """Check if a watcher is running by checking PID lock file."""
@@ -36,11 +52,17 @@ def register_hook():
     if not any(isinstance(x, NB_finder) for x in sys.meta_path):
         sys.meta_path.insert(0, NB_finder())
 
+        # Add project root to sys.path to enable cross-folder notebook imports
+        if PROJECT_ROOT not in sys.path:
+            sys.path.insert(0, PROJECT_ROOT)
+
         # Create cache directory if it doesn't exist
         os.makedirs(SHADOW_DIR, exist_ok=True)
 
-        # Spawn daemon only if it isn't already running
-        if not is_watcher_running():
+        # Spawn daemon only if it isn't already running, and we aren't running a CLI command or the watcher manually with `python -m EasyJupyter.watcher`
+        is_watcher_script = any("watcher" in arg for arg in sys.argv)
+        is_cli_script = os.path.basename(sys.argv[0]) in ["easyjupyter", "easyjupyter.exe", "cli.py"] or "EasyJupyter.cli" in sys.argv
+        if not is_watcher_running() and not is_watcher_script and not is_cli_script:
             # print("[EasyJupyter] Spawning background watcher...")
 
             # Open a log file to catch any background daemon errors

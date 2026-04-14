@@ -6,137 +6,10 @@ import sys
 import importlib.abc
 import importlib.util
 import traceback
-from rich.console import Console
 from rich.panel import Panel
-from rich.theme import Theme
-from rich.table import Table
 import json
 import time
-from rich.progress import track
-import datetime
-
-VSC_SETTINGS_UPDATED = False
-UPDATED_NOTEBOOKS = []  # Track what notebooks the user has updated
-
-
-# Rich library theme
-custom_theme = Theme(
-    {
-        "label": "bold default",
-        "path": "cyan",
-        "cell_location": "yellow",
-    }
-)
-console = Console(theme=custom_theme)
-
-
-def cleanup_cache():
-    """
-    If user moves, renames or deletes a notebook, also delete its cache file.
-        Run with: `easyjupyter --clean`
-    """
-    if not os.path.exists(EasyJupyterLoader.SHADOW_DIR):
-        console.print("[yellow]No cache directory found.[/yellow]")
-        return
-
-    removed_count = 0
-
-    for root, dirs, files in os.walk(EasyJupyterLoader.SHADOW_DIR, topdown=False):
-        for f in files:
-            if f.endswith(".py"):
-                cache_file_path = os.path.join(root, f)
-
-                # Reconstruct original notebook path
-                rel_to_cache = os.path.relpath(
-                    cache_file_path, EasyJupyterLoader.SHADOW_DIR
-                )
-                og_nb_path = os.path.join(
-                    EasyJupyterLoader.PROJECT_ROOT,
-                    rel_to_cache.replace(".py", ".ipynb"),
-                )
-
-                if not os.path.exists(og_nb_path):
-                    os.remove(cache_file_path)
-                    console.print(
-                        f"[bold red]🗑️  Cache cleared:[/bold red] {rel_to_cache}"
-                    )
-                    removed_count += 1
-
-        # Clean up empty directories
-        if not os.listdir(root) and root != EasyJupyterLoader.SHADOW_DIR:
-            os.rmdir(root)
-
-    if removed_count > 0:
-        console.print(
-            f"[bold green]Cache cleaned:[/bold green] {removed_count} files removed."
-        )
-    else:
-        console.print("[yellow]Cache is okay, no need to clean.[/yellow]")
-
-
-def sync_all():
-    """
-    When user updates a Notebook sync it to its cache file.
-    """
-    global UPDATED_NOTEBOOKS
-    root_dir = "."
-    UPDATED_NOTEBOOKS = []  # clear list
-    all_nb = []
-
-    for root, _, files in os.walk(root_dir):
-        if EasyJupyterLoader.SHADOW_DIR in root:
-            continue  # skip the cache dir
-        all_nb.extend([os.path.join(root, f) for f in files if f.endswith(".ipynb")])
-
-    if all_nb:
-        for nb_path in track(all_nb, description="[cyan]Syncing Notebooks..."):
-            # Create a loader instance for each notebook to trigger the sync
-            loader = EasyJupyterLoader(nb_path)
-            loader.get_code()
-        console.print("[bold green]Sync Complete![/bold green]")
-    else:
-        console.print("[yellow]No notebooks updated![/yellow]")
-
-    print_nb_update_report()
-
-
-def print_nb_update_report():
-    if not UPDATED_NOTEBOOKS:
-        return
-
-    # Check if we should write to a log file instead of terminal
-    # We can detect the daemon by checking if our PID matches the watcher.pid file
-    log_path = os.path.join(EasyJupyterLoader.SHADOW_DIR, "watcher.log")
-
-    # If the log file exists and we are likely the daemon, log to file
-    # Otherwise, if it's a manual sync or main script, print to console.
-    # For the log file, we'll use a plain text format.
-    if os.path.exists(log_path):
-        with open(log_path, "a") as f:
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            f.write(f"\n[{timestamp}] Notebook Updates:\n")
-            for nb_rel_path, shadow_path in UPDATED_NOTEBOOKS:
-                f.write(f"  - Notebook: {nb_rel_path}\n")
-                f.write(f"    Cache:    {shadow_path}\n")
-            f.write("\n")
-    else:
-        _render_table(console)
-
-
-def _render_table(output_console):
-    table = Table(
-        title="Notebook Updates",
-        title_style="label",
-        show_header=True,
-        header_style="bold default",
-    )
-    table.add_column("Notebook File Updated", style="path", width=45)
-    table.add_column("Cache Updated At", style="cell_location", width=45)
-
-    for nb_rel_path, shadow_path in UPDATED_NOTEBOOKS:
-        table.add_row(nb_rel_path, shadow_path)
-
-    output_console.print(table)
+from . import console, SHADOW_DIR, PROJECT_ROOT, UPDATED_NOTEBOOKS
 
 
 class NB_finder(importlib.abc.MetaPathFinder):
@@ -171,17 +44,15 @@ class EasyJupyterLoader(importlib.abc.Loader):
 
     IGNORE_CELL_SYNTAX = "# @i-c"
     IGNORE_LINE = "# @i-l"
-    PROJECT_ROOT = os.getcwd()
-    SHADOW_DIR = os.path.join(PROJECT_ROOT, ".easyJupyter_cache")
 
     def __init__(self, path):
         self.path = path
 
     def _get_shadow_path(self):
         """Mirrors the source directory structure into the cache directory."""
-        rel_path = os.path.relpath(self.path, self.PROJECT_ROOT)
+        rel_path = os.path.relpath(self.path, PROJECT_ROOT)
         shadow_rel = rel_path.replace(".ipynb", ".py")
-        return os.path.join(self.SHADOW_DIR, shadow_rel)
+        return os.path.join(SHADOW_DIR, shadow_rel)
 
     def create_module(self, spec):
         """Import the notebook as a module"""
@@ -191,7 +62,7 @@ class EasyJupyterLoader(importlib.abc.Loader):
         # if the file is 'models/layers/attention.ipynb', we want the package to be 'models.layers'
         path_parts = os.path.normpath(self.path).split(os.sep)
         # remove extension and join with '.'
-        rel_path = os.path.relpath(self.path, self.PROJECT_ROOT)
+        rel_path = os.path.relpath(self.path, PROJECT_ROOT)
         package_parts = os.path.dirname(rel_path).split(os.sep)
         pkg_path = ".".join([p for p in package_parts if p])
 
@@ -234,8 +105,8 @@ class EasyJupyterLoader(importlib.abc.Loader):
             f.write(code)
 
         # Print to show what notebooks were updated
-        nb_rel_path = os.path.relpath(self.path, self.PROJECT_ROOT)
-        shadow_rel_path = os.path.relpath(shadow_path, self.PROJECT_ROOT)
+        nb_rel_path = os.path.relpath(self.path, PROJECT_ROOT)
+        shadow_rel_path = os.path.relpath(shadow_path, PROJECT_ROOT)
 
         UPDATED_NOTEBOOKS.append((nb_rel_path, shadow_rel_path))
 
@@ -397,7 +268,7 @@ class EasyJupyterLoader(importlib.abc.Loader):
 
         # Locate the shadow file to find the context to share to user
         py_cache_filename = os.path.basename(self.path).replace(".ipynb", ".py")
-        shadow_path = os.path.join(self.SHADOW_DIR, py_cache_filename)
+        shadow_path = os.path.join(SHADOW_DIR, py_cache_filename)
 
         # Find which Cell caused the error
         target_cell = "Unknown"

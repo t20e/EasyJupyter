@@ -2,11 +2,11 @@
 
 import argparse
 import sys
-from .loader import sync_all, cleanup_cache, print_nb_update_report
 import os
 import time
-from . import SHADOW_DIR
-
+from EasyJupyter import PROJECT_ROOT, SHADOW_DIR, console, UPDATED_NOTEBOOKS
+from EasyJupyter.loader import EasyJupyterLoader
+from EasyJupyter.utils import cleanup_cache, sync_all, stop_daemon
 
 def main():
     parser = argparse.ArgumentParser()
@@ -19,12 +19,13 @@ def main():
         action="store_true",
         help="Actively watch the daemon's logs and warnings in the foreground",
     )
+    parser.add_argument("--stop", action="store_true", help="Stop the background daemon process")
     args = parser.parse_args()
 
     if args.clean:
-        cleanup_cache()
+        cleanup_cache(PROJECT_ROOT, SHADOW_DIR, console)
     elif args.sync:
-        sync_all()
+        sync_all(PROJECT_ROOT, SHADOW_DIR, console, UPDATED_NOTEBOOKS, EasyJupyterLoader)
     elif args.watch:
         log_path = os.path.join(SHADOW_DIR, "watcher.log")
         if not os.path.exists(log_path):
@@ -44,6 +45,8 @@ def main():
                     sys.stdout.flush()
         except KeyboardInterrupt:
             print("\nStopped watching logs.")
+    elif args.stop:
+        stop_daemon(SHADOW_DIR, console)
     else:
         parser.print_help()
 

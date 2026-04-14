@@ -1,16 +1,20 @@
 # EasyJupyter
 
-EasyJupyter allows you to seamlessly integrate your Jupyter Notebook code into Python projects or other notebooks. It transforms your notebooks into reusable modules, enabling you to leverage their interactive development environment while maintaining their native display for documentation and collaboration.
+EasyJupyter allows you to effortlessly integrate your Jupyter Notebook code into any Python project or other notebooks. It intelligently transforms your notebooks into standard Python modules, allowing you to import functions, classes, and variables as if they were regular `.py` files. This seamless process, managed by a background caching mechanism, lets you leverage the interactive development environment of notebooks for rapid prototyping and analysis, while ensuring your code is modular and reusable.
 
-Benefits:
+This is particularly useful for AI/Data science projects. For example, if you are building out a Transformer architecture, you could code and write notes for each layer of the model in its own notebook, and then seamlessly import them into your main project or another notebook.
+
+Key Benefits:
 
 - Native GitHub Rendering: Keep your code in notebooks so plots and markdown render natively on GitHub.
 - Zero Clutter: Generated cache files are stored in a hidden `.easyJupyter_cache` directory, keeping your workspace clean.
 - Custom ignore syntax to ignore exploratory cells, or lines of code.
+
+**How It Works:** When EasyJupyter is first imported within a project, it initiates a single, detached background daemon for that specific project. This daemon is tied to your project's root (specifically, the generated `.easyJupyter_cache/watcher.pid` file) and monitors only the notebooks within it. This per-project design ensures that different projects can have their own daemons completely isolated and do not interfere with each other. If the daemon for a project is not already running, it will be started automatically the next time you import EasyJupyter within that project's environment.
   
 ## Ignore Notebook Commands
 
-Use these commands inside your notebooks to control what gets compiled into the cache file.
+Use these commands inside notebooks to control what gets compiled into the cache.
 
 - **Markdown Cells:** Ignored by default.
 - **Ignore An Entire Cell:**
@@ -20,27 +24,34 @@ Use these commands inside your notebooks to control what gets compiled into the 
 
 ## Getting Started
 
-### Installation & Initial Sync
-
-First, install the library, then run the sync command to generate the cache files for any existing notebooks.
+### Installation
 
 ```bash
 pip install easyjupyter
-easyjupyter --sync
 ```
 
 ### Usage
 
-🚨 In your project's entry point (e.g., main.py), or in a notebook, import the library at the very top of the file:
+In your project's entry point (e.g., main.py), or in Jupyter Notebooks, import the library at the very top of the file:
 
 ```python
-import EasyJupyter
+import EasyJupyter # Import at the very top of the file
 from my_notebook import Class, Function_name
 ```
 
-**How It Works:** When EasyJupyter is first imported and run, it initiates a single, detached background daemon. This daemon then continuously monitors your notebooks, instantly updating their hidden cache files every time you save. This design ensures efficient resource use, as only one daemon operates at a time. If the daemon is not already running (e.g., after a system restart or a period of inactivity), a new one will be automatically started when EasyJupyter is imported again.
+- Importing EasyJupyter in many files is not a problem, as only one daemon can run at a time per project, you could import it in all your files if you want.
+
+🚨 Note: If your project has nested folders, you need to tell EasyJupyter where your root folder is, by creating a `easyJupyterConfig` file in the root of your project.
+
+```bash
+touch easyJupyterConfig
+```
+
+Check out [example_nested_project](example_nested_project). Note run `main.py` from ./example_nested_project, also for VSC's Pylance to kick in, open a new VSC window with ./example_nested_project as root, and follow VSC Pylance Intellisense Setup below.
 
 ### Arguments
+
+- Always run `easyjupyter --<argument>` in the root of your project.
 
 #### Cache Cleanup
 
@@ -52,15 +63,23 @@ from my_notebook import Class, Function_name
 
 #### Watch Daemon Logs
 
-- If you incorrectly use EasyJupyter in a notebook (e.g., redundant ignore comments), warnings will be embedded directly into the generated cache file. These warnings will be printed to the console (or notebook output) whenever the cached module is imported and executed, even when importing from another notebook. However, if you want to view the living warnings as the daemon runs, run:
+- If you incorrectly use EasyJupyter in a notebook (e.g., redundant ignore comments), warnings will be embedded directly into the generated cache file. These warnings will be printed to the console (or notebook output) whenever the cached module is imported and executed, even when importing from another notebook. However, if you want to view the live warnings as the daemon runs, run:
 
     ```bash
     easyjupyter --watch
     ```
 
+#### Stop Daemon
+
+- The daemon process will terminate by itself, however, if you need to gracefully stop the background daemon process, run:
+
+    ```bash
+    easyjupyter --stop
+    ```
+
 ### VSC Pylance Intellisense Setup
 
-VS Code's Pylance intellisense will not work with notebooks, or the hidden cache files generated for the notebooks. But you can tell it where to look for the cache files. Run one of the following commands in the root of your project:
+VS Code's Pylance intellisense will not natively work with notebooks, or the hidden cache files generated for the notebooks. But you can tell it where to look for the cache files. Run one of the following commands in the root of your project:
 
 1. If you don't have a `.vscode/settings.json` file yet, run:
 
@@ -72,50 +91,16 @@ VS Code's Pylance intellisense will not work with notebooks, or the hidden cache
     }' > .vscode/settings.json
     ```
 
-2. If you already have a `.vscode/settings.json` file, add the following to it:
+2. If you already have a `.vscode/settings.json` file, add the following inside the `{}` brackets:
 
     ```json
-    {
-        "python.analysis.extraPaths": [
-            "./.easyJupyter_cache"
-        ]
-    }
+    "python.analysis.extraPaths": [
+        "./.easyJupyter_cache"
+    ]
     ```
 
 ### Other
 
-If any issues occur with the watcher daemon, manually run it with: `python -m EasyJupyter.watcher` (note that this only spawns the daemon in the foreground), or check the logs in `.easyJupyter_cache/watcher.log`.
+If any issues occur with the watcher daemon, manually run it with: `python -m EasyJupyter.watcher` (note that this spawns the daemon in the foreground for debugging). If the daemon is already running in the background, you will need to delete the `.easyJupyter_cache/watcher.pid` file first.
 
-#### Not For You | Dev Notes
-
-- When updating the daemon, we need to clear the old cache and restart the daemon.
-
- ```bash
- pkill -f EasyJupyter.watcher
- rm -rf .easyJupyter_cache
- easyjupyter --sync
- ```
-
-- Install the library locally from the pyproject.toml for developing: `pip install -e .`
-- Distributing to PyPI:
-  - Releases are automated via GitHub Actions *(CI/CD)*. To publish a new release, tag a commit with the new version number (e.g., `git tag 0.1.2` and `git push --tags`), or do it in Github Desktop.
-  - **Note:** If you make any changes to `pyproject.toml` (like adding dependencies), you must run `poetry lock` and commit the updated `poetry.lock` file before tagging the release, otherwise the automated build will fail!
-
-  - Testing Before Releasing Locally (on TestPyPI):
-    1. First-Time Setup:
-        - Create an API token on TestPyPI. Note: [https://pypi.org/](https://pypi.org/) and [https://test.pypi.org/](https://test.pypi.org/) are not the same, have a different login for each!
-        - Configure Poetry with the repository URL and your token:
-
-          ```bash
-          # 1. Tell Poetry where TestPyPI is
-          poetry config repositories.testpypi https://test.pypi.org/legacy/
-          # 2. Provide your token for authentication
-          poetry config pypi-token.testpypi <paste-your-testpypi-token-here>
-          ```
-
-    2. Before Each Test Release:
-        - Ensure your `poetry.lock` is up-to-date: `poetry lock`
-        - Check for errors: `poetry check`
-        - Build the package: `poetry build`
-    3. Publish to TestPyPI:
-        - `poetry publish -r testpypi`
+You can always check the background daemon logs inside `.easyJupyter_cache/watcher.log`.
