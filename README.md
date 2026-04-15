@@ -41,17 +41,41 @@ from my_notebook import Class, Function_name
 
 - Importing EasyJupyter in many files is not a problem, as only one daemon can run at a time per project, you could import it in all your files if you want.
 
-🚨 Note: If your project has nested folders, you need to tell EasyJupyter where your root folder is, by creating a `easyJupyterConfig` file in the root of your project.
+> [!important]
+> Never editing the cache files directly, only edit the notebooks!
+>
+> If your project has nested folders, you need to tell EasyJupyter where your root folder is, by creating a `easyJupyterConfig` file in the root of your project. This will allow you to run nested notebooks, and also allow you to import modules from the root of your project. #TODO reword this
+>
+> ```bash
+> touch easyJupyterConfig
+> ```
 
-```bash
-touch easyJupyterConfig
-```
+---
 
-Check out [example_nested_project](example_nested_project). Note run `main.py` from ./example_nested_project, also for VSC's Pylance to kick in, open a new VSC window with ./example_nested_project as root, and follow VSC Pylance Intellisense Setup below.
+> [!NOTE]
+>
+> - Check out [example_nested_project](example_nested_project). Note run `main.py` from ./example_nested_project, also for VSC's Pylance to kick in, open a new VSC window with ./example_nested_project as root, and follow VSC Pylance Intellisense Setup below.
+>
+> - You should use Notebook automatic reloading if working with many notebooks at a time to auto import notebooks you modify into the current notebook you are in. Add below to a cell at the top of notebooks! #TODO reword this:
+>
+>   ```python
+>   # @i-c
+>   %load_ext autoreload
+>   %autoreload 2
+>   ```
 
 ### Arguments
 
-- Always run `easyjupyter --<argument>` in the root of your project.
+- Always run `easyjupyter --<argument>` in the root of your project. # TODO Since the daemon runs once per project, cant you run arguments from anywhere inside a project? Or maybe I should create the easyJupyterConfig file in the root if they don't have one?
+
+#### Sync All Notebooks
+
+- Sync all notebooks to the cache, run:
+  - Do this only if your cache is empty and you have existing notebooks, not every time you update a notebook.
+
+    ```bash
+    easyjupyter --sync
+    ```
 
 #### Cache Cleanup
 
@@ -98,6 +122,8 @@ VS Code's Pylance intellisense will not natively work with notebooks, or the hid
         "./.easyJupyter_cache"
     ]
     ```
+
+3. Make sure that in VSC you are selecting the environment that has EasyJupyter installed. For notebooks, VSC will prompt you to select the environment when you run a cell in a notebook. For .py files, you can manually select the environment in the bottom right corner of VSC.
 
 ### Other
 

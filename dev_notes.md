@@ -41,7 +41,7 @@
         # Check for errors:
         poetry check
         # Build the package:
-        poetry build
+        poetry build # This is only for local, the Github workflow handles the building when publishing to PyPI
     ```
 
   - **Testing Before Releasing Locally (on TestPyPI):**
