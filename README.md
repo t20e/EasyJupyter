@@ -11,7 +11,23 @@ Key Benefits:
 - Custom ignore syntax to ignore exploratory cells, or lines of code.
 
 **How It Works:** When EasyJupyter is first imported within a project, it initiates a single, detached background daemon for that specific project. This daemon is tied to your project's root (specifically, the generated `.easyJupyter_cache/watcher.pid` file) and monitors only the notebooks within it. This per-project design ensures that different projects can have their own daemons completely isolated and do not interfere with each other. If the daemon for a project is not already running, it will be started automatically the next time you import EasyJupyter within that project's environment.
-  
+
+## Table of Contents
+
+- [EasyJupyter](#easyjupyter)
+  - [Table of Contents](#table-of-contents)
+  - [Ignore Notebook Commands](#ignore-notebook-commands)
+  - [Getting Started](#getting-started)
+    - [Installation](#installation)
+    - [Usage](#usage)
+    - [Arguments](#arguments)
+      - [Sync All Notebooks](#sync-all-notebooks)
+      - [Cache Cleanup](#cache-cleanup)
+      - [Watch Daemon Logs](#watch-daemon-logs)
+      - [Stop Daemon](#stop-daemon)
+    - [VSC Pylance Intellisense Setup](#vsc-pylance-intellisense-setup)
+    - [Resolving Errors](#resolving-errors)
+
 ## Ignore Notebook Commands
 
 Use these commands inside notebooks to control what gets compiled into the cache.
@@ -32,7 +48,7 @@ pip install easyjupyter
 
 ### Usage
 
-In your project's entry point (e.g., main.py), or in Jupyter Notebooks, import the library at the very top of the file:
+In your project's entry point (e.g., `main.py`) and in any Jupyter Notebooks where you want the daemon to be active or when importing from other notebooks, import the library at the very top of the file:
 
 ```python
 import EasyJupyter # Import at the very top of the file
@@ -42,11 +58,12 @@ from my_notebook import Class, Function_name
 - Importing EasyJupyter in many files is not a problem, as only one daemon can run at a time per project, you could import it in all your files if you want.
 
 > [!important]
-> Never editing the cache files directly, only edit the notebooks!
+> Never edit the cache files directly, only edit the notebooks!
 >
-> If your project has nested folders, you need to tell EasyJupyter where your root folder is, by creating a `easyJupyterConfig` file in the root of your project. This will allow you to run nested notebooks, and also allow you to import modules from the root of your project. #TODO reword this
+> If your project has nested folders. Create a `easyJupyterConfig` file in the root of your project!
 >
 > ```bash
+> # cd into your project root
 > touch easyJupyterConfig
 > ```
 
@@ -54,9 +71,9 @@ from my_notebook import Class, Function_name
 
 > [!NOTE]
 >
-> - Check out [example_nested_project](example_nested_project). Note run `main.py` from ./example_nested_project, also for VSC's Pylance to kick in, open a new VSC window with ./example_nested_project as root, and follow VSC Pylance Intellisense Setup below.
+> - Check out [example_nested_project](https://github.com/t20e/EasyJupyter/tree/main/example_nested_project). Note run `main.py` from inside ./example_nested_project, also for VSC's Pylance to kick in, open a new VSC window with ./example_nested_project as root, and follow VSC Pylance Intellisense Setup below.
 >
-> - You should use Notebook automatic reloading if working with many notebooks at a time to auto import notebooks you modify into the current notebook you are in. Add below to a cell at the top of notebooks! #TODO reword this:
+> - You should use Notebook automatic reloading if you are simultaneously working with many notebooks that import each other. Add following to a cell at the top of notebooks!
 >
 >   ```python
 >   # @i-c
@@ -66,7 +83,7 @@ from my_notebook import Class, Function_name
 
 ### Arguments
 
-- Always run `easyjupyter --<argument>` in the root of your project. # TODO Since the daemon runs once per project, cant you run arguments from anywhere inside a project? Or maybe I should create the easyJupyterConfig file in the root if they don't have one?
+- Always run `easyjupyter --<argument>` from somewhere in a project, where the daemon lives.
 
 #### Sync All Notebooks
 
@@ -125,7 +142,7 @@ VS Code's Pylance intellisense will not natively work with notebooks, or the hid
 
 3. Make sure that in VSC you are selecting the environment that has EasyJupyter installed. For notebooks, VSC will prompt you to select the environment when you run a cell in a notebook. For .py files, you can manually select the environment in the bottom right corner of VSC.
 
-### Other
+### Resolving Errors
 
 If any issues occur with the watcher daemon, manually run it with: `python -m EasyJupyter.watcher` (note that this spawns the daemon in the foreground for debugging). If the daemon is already running in the background, you will need to delete the `.easyJupyter_cache/watcher.pid` file first.
 

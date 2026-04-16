@@ -4,12 +4,19 @@ import argparse
 import sys
 import os
 import time
+import importlib.metadata
 from EasyJupyter import PROJECT_ROOT, SHADOW_DIR, console, UPDATED_NOTEBOOKS
 from EasyJupyter.loader import EasyJupyterLoader
 from EasyJupyter.utils import cleanup_cache, sync_all, stop_daemon
 
 def main():
     parser = argparse.ArgumentParser()
+    try:
+        __version__ = importlib.metadata.version("EasyJupyter")
+    except importlib.metadata.PackageNotFoundError:
+        __version__ = "unknown"
+
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}", help="Show the version and exit")
     parser.add_argument("--clean", action="store_true", help="Wipe the cache folder")
     parser.add_argument(
         "--sync", action="store_true", help="Sync all notebooks manually"

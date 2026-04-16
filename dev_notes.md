@@ -20,16 +20,19 @@
     pipx install poetry
 
     # Create a new conda environment
-    conda create -n easyjupyter_env python=3.12 -y
-    conda activate easyjupyter_env
+    conda create -n easyjupyter_local_test_env python=3.12 -y
+    conda activate easyjupyter_local_test_env
     conda install conda-forge::ipykernel -y
 
+    # Tell Poetry  to not create its own environment, and install packages in teh conda environment
+    poetry config virtualenvs.create false
+
     # Link Poetry to the conda environment
-    poetry env use $(which python)
+    #poetry env use $(which python)
     poetry install
     ```
 
-- When developing install the library locally in a environment from the pyproject.toml: `poetry install` or `pip install -e .`
+- When developing install the library locally from the pyproject.toml (make sure the env was creating using above commands!): `pip install -e .`
 - **Distributing to PyPI:**
   - Releases are automated via GitHub Actions *(CI/CD)*. To publish a new release, tag a commit with the new version number (e.g., `git tag 0.1.2` and `git push --tags`), or do it in Github Desktop.
   - **Note:** If you make any changes to `pyproject.toml` (like adding dependencies), you must run `poetry lock` and commit the updated `poetry.lock` file before tagging the release, otherwise the automated build will fail!
@@ -40,9 +43,9 @@
         poetry lock
         # Check for errors:
         poetry check
-        # Build the package:
-        poetry build # This is only for local, the Github workflow handles the building when publishing to PyPI
     ```
+
+  - Then commit and add the new tag version, github actions will automatically build and publish the package to PyPI!
 
   - **Testing Before Releasing Locally (on TestPyPI):**
     1. First-Time Setup:
@@ -63,5 +66,12 @@
         ```
 
     3. Run the `Run` bullet point from above.
-    4. Publish to TestPyPI:
+    4. Build the package:
+
+        ```bash
+        # Build the package:
+        # poetry build # This is only for local, the Github workflow handles the building when publishing to PyPI
+        ```
+
+    5. Publish to TestPyPI:
         - `poetry publish -r testpypi`

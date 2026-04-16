@@ -4,17 +4,36 @@ from rich.progress import track
 
 from rich.table import Table
 
-
 def get_project_root():
     """
-    Traverse up to find the project root by looking for 'easyJupyterConfig' file. If it doesn't exist, return the current directory as the root.
+    Traverse up to find the project root by looking for 'easyJupyterConfig' file.
+    If it doesn't exist, try to find a '.git' folder or 'pyproject.toml' as a fallback.
+    If all fails, return the current directory as the root and create the config.
     """
-    current_dir = os.path.abspath(os.getcwd())
+    original_dir = os.path.abspath(os.getcwd())
+    current_dir = original_dir
+    
+    # Pass 1: Look for existing easyJupyterConfig
     while current_dir != os.path.dirname(current_dir):
         if os.path.exists(os.path.join(current_dir, "easyJupyterConfig")):
             return current_dir
         current_dir = os.path.dirname(current_dir)
-    return os.path.abspath(os.getcwd())
+    
+    # Pass 2: Fallback to identifying common project roots (.git, pyproject.toml)
+    current_dir = original_dir
+    while current_dir != os.path.dirname(current_dir):
+        if os.path.exists(os.path.join(current_dir, ".git")) or os.path.exists(os.path.join(current_dir, "pyproject.toml")):
+            config_path = os.path.join(current_dir, "easyJupyterConfig")
+            with open(config_path, "w") as f:
+                f.write("This was automatically created by EasyJupyter, so that its daemon knows that this directory is the root of your project.")
+            return current_dir
+        current_dir = os.path.dirname(current_dir)
+
+    # Pass 3: If all else fails, create it in the directory where the script started
+    config_path = os.path.join(original_dir, "easyJupyterConfig")
+    with open(config_path, "w") as f:
+        f.write("This was automatically created by EasyJupyter, so that its daemon knows that this directory is the root of your project.")
+    return original_dir
 
 
 def cleanup_cache(project_root, shadow_dir, console):

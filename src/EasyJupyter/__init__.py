@@ -50,11 +50,11 @@ def register_hook():
     This function is called by the .pth file when Python interpreter starts up. It registers the import hook to the sys.meta_path and starts the watcher.
     """
     if not any(isinstance(x, NB_finder) for x in sys.meta_path):
-        sys.meta_path.insert(0, NB_finder())
+        sys.meta_path.append(NB_finder())
 
-        # Add project root to sys.path to enable cross-folder notebook imports
+        # Add project root to sys.path so modules can be imported.
         if PROJECT_ROOT not in sys.path:
-            sys.path.insert(0, PROJECT_ROOT)
+            sys.path.append(PROJECT_ROOT)
 
         # Create cache directory if it doesn't exist
         os.makedirs(SHADOW_DIR, exist_ok=True)
