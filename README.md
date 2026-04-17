@@ -64,7 +64,8 @@ from my_notebook import Class, Function_name
 >
 > ```bash
 > # cd into your project root
-> touch easyJupyterConfig
+> touch easyJupyterConfig 
+> echo "EasyJupyter, so that its daemon knows that this directory is the root of your project." > easyJupyterConfig
 > ```
 
 ---
@@ -73,7 +74,7 @@ from my_notebook import Class, Function_name
 >
 > - Check out [example_nested_project](https://github.com/t20e/EasyJupyter/tree/main/example_nested_project). Note run `main.py` from inside ./example_nested_project, also for VSC's Pylance to kick in, open a new VSC window with ./example_nested_project as root, and follow VSC Pylance Intellisense Setup below.
 >
-> - You should use Notebook automatic reloading if you are simultaneously working with many notebooks that import each other. Add following to a cell at the top of notebooks!
+> - You should use Notebook automatic reloading if you are simultaneously working with many notebooks that import each other. Add the following to a cell at the top of notebooks!
 >
 >   ```python
 >   # @i-c
