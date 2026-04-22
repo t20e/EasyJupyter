@@ -35,7 +35,6 @@
 - When developing install the library locally from the pyproject.toml (make sure the env was creating using above commands!): `pip install -e .`
 - **Distributing to PyPI:**
   - Releases are automated via GitHub Actions *(CI/CD)*. To publish a new release, tag a commit with the new version number (e.g., `git tag 0.1.2` and `git push --tags`), or do it in Github Desktop.
-  - **Note:** If you make any changes to `pyproject.toml` (like adding dependencies), you must run `poetry lock` and commit the updated `poetry.lock` file before tagging the release, otherwise the automated build will fail!
   - **Run:**
 
     ```bash

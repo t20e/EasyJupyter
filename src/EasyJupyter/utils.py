@@ -4,35 +4,44 @@ from rich.progress import track
 
 from rich.table import Table
 
+auto_cfg_txt = "This file was automatically created by EasyJupyter, so that its daemon knows that this directory is the root of your project. \nIf this is not the root of your project, delete this file and its `.easyJupyter_cache` directory. And add a `.easyJupyterConfig` file to the root of your project."
+
 def get_project_root():
     """
-    Traverse up to find the project root by looking for 'easyJupyterConfig' file.
+    Traverse up to find the project root by looking for '.easyJupyterConfig' file.
     If it doesn't exist, try to find a '.git' folder or 'pyproject.toml' as a fallback.
     If all fails, return the current directory as the root and create the config.
     """
     original_dir = os.path.abspath(os.getcwd())
     current_dir = original_dir
     
-    # Pass 1: Look for existing easyJupyterConfig
+    # Pass 1: Look for existing .easyJupyterConfig
     while current_dir != os.path.dirname(current_dir):
-        if os.path.exists(os.path.join(current_dir, "easyJupyterConfig")):
+        if os.path.exists(os.path.join(current_dir, ".easyJupyterConfig")):
             return current_dir
         current_dir = os.path.dirname(current_dir)
     
     # Pass 2: Fallback to identifying common project roots (.git, pyproject.toml)
     current_dir = original_dir
     while current_dir != os.path.dirname(current_dir):
+        # TODO should I add more project root files here?
         if os.path.exists(os.path.join(current_dir, ".git")) or os.path.exists(os.path.join(current_dir, "pyproject.toml")):
-            config_path = os.path.join(current_dir, "easyJupyterConfig")
-            with open(config_path, "w") as f:
-                f.write("This was automatically created by EasyJupyter, so that its daemon knows that this directory is the root of your project.")
+            config_path = os.path.join(current_dir, ".easyJupyterConfig")
+            try:
+                with open(config_path, "w") as f:
+                    f.write(auto_cfg_txt)
+            except PermissionError:
+                pass  # We found the root, but don't have write access. Just return the path.
             return current_dir
         current_dir = os.path.dirname(current_dir)
 
     # Pass 3: If all else fails, create it in the directory where the script started
-    config_path = os.path.join(original_dir, "easyJupyterConfig")
-    with open(config_path, "w") as f:
-        f.write("This was automatically created by EasyJupyter, so that its daemon knows that this directory is the root of your project.")
+    config_path = os.path.join(original_dir, ".easyJupyterConfig")
+    try:
+        with open(config_path, "w") as f:
+            f.write(auto_cfg_txt)
+    except PermissionError:
+        pass  # Fallback to returning original_dir even if we can't write the config
     return original_dir
 
 

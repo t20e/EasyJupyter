@@ -58,21 +58,19 @@ from my_notebook import Class, Function_name
 - Importing EasyJupyter in many files is not a problem, as only one daemon can run at a time per project, you could import it in all your files if you want.
 
 > [!important]
-> Never edit the cache files directly, only edit the notebooks!
+> ⭐️ Never edit the cache files directly, only edit the notebooks!
 >
-> If your project has nested folders. Create a `easyJupyterConfig` file in the root of your project!
+> ⭐️ If your project has **nested folders**, and does contain a `.git` or `pyproject.toml`. Create a `.easyJupyterConfig` file in the root of your project, run:
 >
 > ```bash
 > # cd into your project root
-> touch easyJupyterConfig 
-> echo "EasyJupyter, so that its daemon knows that this directory is the root of your project." > easyJupyterConfig
+> touch .easyJupyterConfig 
+> echo "EasyJupyter: The file tells the daemon that this directory is the root of your project." > .easyJupyterConfig
 > ```
 
 ---
 
 > [!NOTE]
->
-> - Check out [example_nested_project](https://github.com/t20e/EasyJupyter/tree/main/example_nested_project). Note run `main.py` from inside ./example_nested_project, also for VSC's Pylance to kick in, open a new VSC window with ./example_nested_project as root, and follow VSC Pylance Intellisense Setup below.
 >
 > - You should use Notebook automatic reloading if you are simultaneously working with many notebooks that import each other. Add the following to a cell at the top of notebooks!
 >
@@ -81,6 +79,10 @@ from my_notebook import Class, Function_name
 >   %load_ext autoreload
 >   %autoreload 2
 >   ```
+>
+> - Examples:
+>   - [example_nested_project](https://github.com/t20e/EasyJupyter/tree/main/example_nested_project). Note run `main.py` from inside ./example_nested_project, also for VSC's Pylance to kick in, open a new VSC window with ./example_nested_project as root, and follow VSC Pylance Intellisense Setup below.
+>   - A [larger project example](https://github.com/t20e/AI_projects_and_res/tree/main/How_to_build_an_LLM)
 
 ### Arguments
 
@@ -117,6 +119,7 @@ from my_notebook import Class, Function_name
 
     ```bash
     easyjupyter --stop
+    # Or hard stop: `pkill -f EasyJupyter.watcher`
     ```
 
 ### VSC Pylance Intellisense Setup
@@ -148,3 +151,14 @@ VS Code's Pylance intellisense will not natively work with notebooks, or the hid
 If any issues occur with the watcher daemon, manually run it with: `python -m EasyJupyter.watcher` (note that this spawns the daemon in the foreground for debugging). If the daemon is already running in the background, you will need to delete the `.easyJupyter_cache/watcher.pid` file first.
 
 You can always check the background daemon logs inside `.easyJupyter_cache/watcher.log`.
+
+**FAQ:** #TODO add more things
+
+- Import Issues:
+  - Did you add the `.easyJupyterConfig` file to the root of your project?
+  - Did you name the notebook with a `-` instead of a `_`?
+  - Did you add EasyJupyter to the notebook to be imported and run it?
+- Errors:
+  - Did you forget to use ignore syntax in the notebook that you are trying to import?
+- For VSC intellisense, did you add the extraPaths to your settings.json
+- If AI coding assistants are suggesting edits in the hidden cache files, add `.easyJupyter_cache/` to that AI's config ignore files e.g., `.cursorignore`..
