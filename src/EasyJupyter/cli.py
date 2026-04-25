@@ -3,9 +3,10 @@
 import argparse
 import sys
 import os
+from pathlib import Path
 import time
 import importlib.metadata
-from EasyJupyter import PROJECT_ROOT, SHADOW_DIR, console, UPDATED_NOTEBOOKS
+from EasyJupyter import PROJECT_ROOT, SHADOW_DIR, console, UPDATED_NOTEBOOKS, start_background_daemon
 from EasyJupyter.loader import EasyJupyterLoader
 from EasyJupyter.utils import cleanup_cache, sync_all, stop_daemon
 
@@ -33,9 +34,11 @@ def main():
         cleanup_cache(PROJECT_ROOT, SHADOW_DIR, console)
     elif args.sync:
         sync_all(PROJECT_ROOT, SHADOW_DIR, console, UPDATED_NOTEBOOKS, EasyJupyterLoader)
+        start_background_daemon()
+        console.print("[bold green]Background watcher daemon started.[/bold green]")
     elif args.watch:
-        log_path = os.path.join(SHADOW_DIR, "watcher.log")
-        if not os.path.exists(log_path):
+        log_path = SHADOW_DIR / "watcher.log"
+        if not log_path.exists():
             print(f"Log file not found at {log_path}")
             return
 

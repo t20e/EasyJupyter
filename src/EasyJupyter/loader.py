@@ -2,6 +2,7 @@ import types
 import nbformat
 import sys
 import os
+from pathlib import Path
 import sys
 import importlib.abc
 import importlib.util
@@ -14,7 +15,7 @@ from . import console, SHADOW_DIR, PROJECT_ROOT, UPDATED_NOTEBOOKS
 
 class NB_finder(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
-        # Look for the notebook ile in the expected path
+        # Look for the notebook file in the expected path
         mod_name = fullname.split(".")[-1]
 
         # Use python's native sys.path for top-level imports
@@ -31,8 +32,9 @@ class NB_finder(importlib.abc.MetaPathFinder):
             if not isinstance(p, str) or not os.path.isdir(p):
                 continue
 
-            nb_path = os.path.join(p, f"{mod_name}.ipynb")
-            if os.path.exists(nb_path):
+            nb_path = Path(p) / f"{mod_name}.ipynb"
+
+            if nb_path.exists():
                 return importlib.util.spec_from_file_location(
                     fullname, nb_path, loader=EasyJupyterLoader(nb_path)
                 )
@@ -52,7 +54,7 @@ class EasyJupyterLoader(importlib.abc.Loader):
         """Mirrors the source directory structure into the cache directory."""
         rel_path = os.path.relpath(self.path, PROJECT_ROOT)
         shadow_rel = rel_path.replace(".ipynb", ".py")
-        return os.path.join(SHADOW_DIR, shadow_rel)
+        return SHADOW_DIR / shadow_rel
 
     def create_module(self, spec):
         """Import the notebook as a module"""
@@ -83,7 +85,7 @@ class EasyJupyterLoader(importlib.abc.Loader):
         shadow_path = self._get_shadow_path()
 
         # Check timestamps
-        if os.path.exists(shadow_path):
+        if shadow_path.exists():
             nb_mtime = os.path.getmtime(self.path)
             shadow_mtime = os.path.getmtime(shadow_path)
 
@@ -98,7 +100,7 @@ class EasyJupyterLoader(importlib.abc.Loader):
     def write_shadow_ref(self, code):
         """Create a shadow Python file to store the transformed contents of a notebook."""
         shadow_path = self._get_shadow_path()
-        os.makedirs(os.path.dirname(shadow_path), exist_ok=True)
+        shadow_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write the shadow file
         with open(shadow_path, "w") as f:
@@ -270,32 +272,40 @@ class EasyJupyterLoader(importlib.abc.Loader):
 
         stack = traceback.extract_tb(tb)  # returns a list of FrameSummary objects
 
-        # Get the last frame (where the actual error occurred)
-        last_frame = stack[-1]
-        line_no = last_frame.lineno
+        # SyntaxErrors happen during compilation, so the lineno on the error object is accurate
+        if isinstance(error, SyntaxError) and error.lineno is not None:
+            line_no = error.lineno
+        else:
+            # Get the last frame (where the actual error occurred)
+            last_frame = stack[-1]
+            line_no = last_frame.lineno
 
         # Locate the shadow file to find the context to share to user
-        py_cache_filename = os.path.basename(self.path).replace(".ipynb", ".py")
-        shadow_path = os.path.join(SHADOW_DIR, py_cache_filename)
+        shadow_path = self._get_shadow_path()
 
         # Find which Cell caused the error
         target_cell = "Unknown"
         all_lines = []
+        code_line = ""
 
-        if os.path.exists(shadow_path):
+        if shadow_path.exists():
             with open(shadow_path, "r") as f:
                 all_lines = f.readlines()
-                # Loop backward from the error line to find the last '# CELL' header
-                for i in range(line_no - 1, -1, -1):
-                    if all_lines[i].startswith("# CELL"):
-                        target_cell = all_lines[i].strip("# ").strip()
-                        break
+                
+                # Safeguard bounds in case error occurs out of index
+                if all_lines and line_no is not None and 0 < line_no <= len(all_lines):
+                    code_line = all_lines[line_no - 1].strip()
+                    # Loop backward from the error line to find the last '# CELL' header
+                    for i in range(line_no - 1, -1, -1):
+                        if all_lines[i].startswith("# CELL"):
+                            target_cell = all_lines[i].strip("# ").strip()
+                            break
 
         # print the note-book first error report
         error_message = (
             f"[label]Notebook:[/label] [path]{os.path.basename(self.path)}[/path]\n"
             f"[label]Location:[/label] [cell_location]{target_cell}[/cell_location]\n"
-            f"[label]Code:[/label] {all_lines[line_no-1].strip()}"
+            f"[label]Code:[/label] {code_line}"
         )
 
         console.print(

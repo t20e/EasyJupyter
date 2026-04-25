@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "EasyJupyter"
-version = "0.1.4" # NOTE: This is a required field, leave it as is, no need to change it, the Github workflow will automatically take care of version using the tag you set for commits!
+version = "0.1.5" # NOTE: This is a required field, leave it as is, no need to change it, the Github workflow will automatically take care of version using the tag you set for commits!
 
 description = "EasyJupyter allows you to effortlessly integrate your Jupyter Notebook code into any Python project or other notebooks."
 readme = "README.md"

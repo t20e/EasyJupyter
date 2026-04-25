@@ -82,7 +82,7 @@ from my_notebook import Class, Function_name
 >
 > - Examples:
 >   - [example_nested_project](https://github.com/t20e/EasyJupyter/tree/main/example_nested_project). Note run `main.py` from inside ./example_nested_project, also for VSC's Pylance to kick in, open a new VSC window with ./example_nested_project as root, and follow VSC Pylance Intellisense Setup below.
->   - A [larger project example](https://github.com/t20e/AI_projects_and_res/tree/main/How_to_build_an_LLM)
+>   - A [larger project example](https://github.com/t20e/How_to_build_an_LLM)
 
 ### Arguments
 
@@ -144,7 +144,7 @@ VS Code's Pylance intellisense will not natively work with notebooks, or the hid
     ]
     ```
 
-3. Make sure that in VSC you are selecting the environment that has EasyJupyter installed. For notebooks, VSC will prompt you to select the environment when you run a cell in a notebook. For .py files, you can manually select the environment in the bottom right corner of VSC.
+3. Make sure that in VSC you are selecting the environment that has EasyJupyter installed. For notebooks, VSC will prompt you to select the environment when you run a cell in a notebook. For .py files, you can manually select the environment in the bottom right corner of VSC. And you have the VSC window open in the root of your project.
 
 ### Resolving Errors
 
@@ -152,7 +152,7 @@ If any issues occur with the watcher daemon, manually run it with: `python -m Ea
 
 You can always check the background daemon logs inside `.easyJupyter_cache/watcher.log`.
 
-**FAQ:** #TODO add more things
+**FAQ:**
 
 - Import Issues:
   - Did you add the `.easyJupyterConfig` file to the root of your project?

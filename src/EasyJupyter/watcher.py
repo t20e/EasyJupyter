@@ -11,9 +11,10 @@ from watchdog.events import FileSystemEventHandler
 from .loader import EasyJupyterLoader
 from . import PROJECT_ROOT, SHADOW_DIR, is_watcher_running
 import datetime
+from pathlib import Path
 
 # Cache and PID paths
-PID_FILE = os.path.join(SHADOW_DIR, "watcher.pid")
+PID_FILE = Path(SHADOW_DIR) / "watcher.pid"
 
 
 class AutoSyncHandler(FileSystemEventHandler):
@@ -43,7 +44,7 @@ class AutoSyncHandler(FileSystemEventHandler):
 
 def cleanup_pid():
     """Remove the PID file when the watcher shuts down."""
-    if os.path.exists(PID_FILE):
+    if PID_FILE.exists():
         os.remove(PID_FILE)
 
 
@@ -53,7 +54,7 @@ def start_daemon():
         print("If you want to restart it manually, please stop the current background process or delete the PID file.")
         return
     
-    os.makedirs(SHADOW_DIR, exist_ok=True)
+    SHADOW_DIR.mkdir(exist_ok=True)
     
     # Write the current process PID to the lock file
     with open(PID_FILE, "w") as f:
@@ -66,7 +67,7 @@ def start_daemon():
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] DEBUG: Watchdog daemon starting.")
     observer = Observer()
-    observer.schedule(AutoSyncHandler(), path=PROJECT_ROOT, recursive=True)
+    observer.schedule(AutoSyncHandler(), path=str(PROJECT_ROOT), recursive=True)
     observer.start()
 
     try:

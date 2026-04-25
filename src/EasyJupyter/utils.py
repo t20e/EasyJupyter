@@ -1,6 +1,7 @@
 import os
 import datetime
 from rich.progress import track
+from pathlib import Path
 
 from rich.table import Table
 
@@ -12,31 +13,32 @@ def get_project_root():
     If it doesn't exist, try to find a '.git' folder or 'pyproject.toml' as a fallback.
     If all fails, return the current directory as the root and create the config.
     """
-    original_dir = os.path.abspath(os.getcwd())
+    original_dir = Path.cwd().resolve()
     current_dir = original_dir
     
     # Pass 1: Look for existing .easyJupyterConfig
-    while current_dir != os.path.dirname(current_dir):
-        if os.path.exists(os.path.join(current_dir, ".easyJupyterConfig")):
+    while current_dir.parent != current_dir:
+        if (current_dir / ".easyJupyterConfig").exists():
             return current_dir
-        current_dir = os.path.dirname(current_dir)
+        current_dir = current_dir.parent
     
     # Pass 2: Fallback to identifying common project roots (.git, pyproject.toml)
     current_dir = original_dir
-    while current_dir != os.path.dirname(current_dir):
-        # TODO should I add more project root files here?
-        if os.path.exists(os.path.join(current_dir, ".git")) or os.path.exists(os.path.join(current_dir, "pyproject.toml")):
-            config_path = os.path.join(current_dir, ".easyJupyterConfig")
+    while current_dir.parent != current_dir:
+        # TODO should I add more project root files here, like makefile?
+
+        if (current_dir / ".git").exists() or (current_dir / "pyproject.toml").exists():
+            config_path = current_dir / ".easyJupyterConfig"
             try:
                 with open(config_path, "w") as f:
                     f.write(auto_cfg_txt)
             except PermissionError:
                 pass  # We found the root, but don't have write access. Just return the path.
             return current_dir
-        current_dir = os.path.dirname(current_dir)
+        current_dir = current_dir.parent
 
     # Pass 3: If all else fails, create it in the directory where the script started
-    config_path = os.path.join(original_dir, ".easyJupyterConfig")
+    config_path = original_dir / ".easyJupyterConfig"
     try:
         with open(config_path, "w") as f:
             f.write(auto_cfg_txt)
@@ -50,7 +52,7 @@ def cleanup_cache(project_root, shadow_dir, console):
     If user moves, renames or deletes a notebook, also delete its cache file.
         Run with: `easyjupyter --clean`
     """
-    if not os.path.exists(shadow_dir):
+    if not shadow_dir.exists():
         console.print("[yellow]No cache directory found.[/yellow]")
         return
 
@@ -59,16 +61,14 @@ def cleanup_cache(project_root, shadow_dir, console):
     for root, dirs, files in os.walk(shadow_dir, topdown=False):
         for f in files:
             if f.endswith(".py"):
-                cache_file_path = os.path.join(root, f)
+                cache_file_path = Path(root) / f
 
                 # Reconstruct original notebook path
                 rel_to_cache = os.path.relpath(cache_file_path, shadow_dir)
-                og_nb_path = os.path.join(
-                    project_root,
-                    rel_to_cache.replace(".py", ".ipynb"),
-                )
+                og_nb_path = project_root / rel_to_cache.replace(".py", ".ipynb")
 
-                if not os.path.exists(og_nb_path):
+
+                if not og_nb_path.exists():
                     os.remove(cache_file_path)
                     console.print(
                         f"[bold red]🗑️  Cache cleared:[/bold red] {rel_to_cache}"
@@ -76,7 +76,7 @@ def cleanup_cache(project_root, shadow_dir, console):
                     removed_count += 1
 
         # Clean up empty directories
-        if not os.listdir(root) and root != shadow_dir:
+        if not os.listdir(root) and Path(root) != shadow_dir:
             os.rmdir(root)
 
     if removed_count > 0:
@@ -109,12 +109,12 @@ def print_nb_update_report(shadow_dir, console, updated_notebooks):
 
     # Check if we should write to a log file instead of terminal
     # We can detect the daemon by checking if our PID matches the watcher.pid file
-    log_path = os.path.join(shadow_dir, "watcher.log")
+    log_path = shadow_dir / "watcher.log"
 
     # If the log file exists and we are likely the daemon, log to file
     # Otherwise, if it's a manual sync or main script, print to console.
     # For the log file, we'll use a plain text format.
-    if os.path.exists(log_path):
+    if log_path.exists():
         with open(log_path, "a") as f:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             f.write(f"\n[{timestamp}] Notebook Updates:\n")
@@ -135,9 +135,12 @@ def sync_all(project_root, shadow_dir, console, updated_notebooks, loader_class)
     all_nb = []
 
     for root, _, files in os.walk(root_dir):
-        if shadow_dir in root:
+        if str(shadow_dir) in root:
             continue  # skip the cache dir
-        all_nb.extend([os.path.join(root, f) for f in files if f.endswith(".ipynb")])
+        all_nb.extend([
+            # os.path.join(root, f) for f in files if f.endswith(".ipynb")
+            Path(root) / f for f in files if f.endswith(".ipynb")
+            ])
 
     if all_nb:
         for nb_path in track(all_nb, description="[cyan]Syncing Notebooks..."):
@@ -154,9 +157,9 @@ def sync_all(project_root, shadow_dir, console, updated_notebooks, loader_class)
 def stop_daemon(shadow_dir, console):
     """Stops the background daemon process gracefully using its PID lock file."""
     import signal
-    pid_file = os.path.join(shadow_dir, "watcher.pid")
+    pid_file = shadow_dir / "watcher.pid"
     
-    if not os.path.exists(pid_file):
+    if not pid_file.exists():
         console.print("[yellow]Watcher daemon is not currently running.[/yellow]")
         return
 
