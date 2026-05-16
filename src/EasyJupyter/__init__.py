@@ -52,7 +52,7 @@ def start_background_daemon():
         log_path = SHADOW_DIR / "watcher.log"
         log_file = open(log_path, "a")
         subprocess.Popen(
-            [sys.executable, "-u", "-m", "EasyJupyter.watcher"],
+            [sys.executable, "-u", "-m", "easyjupyter.watcher"],
             stdin=subprocess.DEVNULL,
             stdout=log_file,
             stderr=subprocess.STDOUT,
@@ -73,16 +73,16 @@ def register_hook():
         # Create cache directory if it doesn't exist
         SHADOW_DIR.mkdir(exist_ok=True)
 
-        # Spawn daemon only if it isn't already running, and we aren't running a CLI command or the watcher manually with `python -m EasyJupyter.watcher`
+        # Spawn daemon only if it isn't already running, and we aren't running a CLI command or the watcher manually with `python -m easyjupyter.watcher`
         is_watcher_script = any("watcher" in arg for arg in sys.argv)
-        is_cli_script = os.path.basename(sys.argv[0]).lower() in ["easyjupyter", "easyjupyter.exe", "cli.py"] or "EasyJupyter.cli" in sys.argv
+        is_cli_script = os.path.basename(sys.argv[0]).lower() in ["easyjupyter", "easyjupyter.exe", "cli.py"] or "easyjupyter.cli" in sys.argv
         if not is_watcher_running() and not is_watcher_script and not is_cli_script:
-            # print("[EasyJupyter] Spawning background watcher...")
+            # print("[easyjupyter] Spawning background watcher...")
 
             # Open a log file to catch any background daemon errors
             start_background_daemon()
         # else:
-        #     print("[EasyJupyter] Watcher is already running.")
+        #     print("[easyjupyter] Watcher is already running.")
 
 
 # Automatically execute when the user imports the library

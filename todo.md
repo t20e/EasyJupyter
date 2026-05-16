@@ -1,23 +1,9 @@
 # TODO
 
-- [ ] A better search in notebooks is a must-have, VSC currently struggles with searches in notebooks. Same for the TODO extension.
+- [ ] 💡 When a user CMD+left mouse click on a function name to go its definition, it brings them to the cache file instead of the notebook file. Can this be fixed without having to create an extension? **Answer:** No, Python language servers lack source mapping natively. As a fallback, the auto-generated file header was updated to explicitly point users to the correct notebook.
+- Line/Cell Specific Mapping (Estimated Time: 1 - 2 days): If you want the experience to be seamless (where clicking a function takes them not just to the notebook, but to the exact cell and line where the function is defined), it will take a bit more effort.
+  - How it works: When intercepting the file open event, you would capture the line number the user landed on in the cache .py file. Because your EasyJupyterLoader already injects helpful headers like # CELL 5 | ID: f974e092, your extension would simply read the text of the cache file up to the user's cursor line, find the last # CELL header, and then use the VS Code Notebook API (vscode.NotebookEditor) to focus on that specific cell index.
+  - Complexity: Navigating the VS Code Notebook API can be slightly finicky compared to standard text editors, which adds some development time.
+  - If you decide to go this route, you can generate the boilerplate for a VS Code extension by simply running npx yo code in your terminal, selecting "New Extension (TypeScript)", and adding your logic to the extension.ts file!
 
-- [ ] Any other warnings I can give the user, if they wrongly use EasyJupyter in a notebook?
-- [ ] How should errors be handled? For example, if user gets an error because they didn't use torch correctly, how should I handle that? Maybe they should always test in a notebook first? Add the error code block where it happened?
 - [ ] Maybe a global daemon that the user can interact with to see all running daemon sessions?
-- [ ] Setup a notebook in nested example that are acutal testes for the EasyJupyter package, it must pass all those tests before I can release publish a new version.
-
-Example error:
-╭───────────────────────────────────────── EasyJupyter Error: ValueError ─────────────────────────────────────────╮
-│ Notebook: llama_config.ipynb                                                                                    │
-│ Location: CELL 2 | ID: 00969281                                                                                 │
-│ Code: raise ValueError(f"Missing attribute {attr} in {cls.__name__}")                                           │
-╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-
-HERE is anther error example, it gave me no code:
-╭──────────────────────────────────────── EasyJupyter Error: SyntaxError ─────────────────────────────────────────╮
-│ Notebook: llama_config.ipynb                                                                                    │
-│ Location: CELL 5 | ID: 00969281                                                                                 │
-│ Code:                                                                                                           │
-╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

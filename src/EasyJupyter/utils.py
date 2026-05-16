@@ -7,6 +7,7 @@ from rich.table import Table
 
 auto_cfg_txt = "This file was automatically created by EasyJupyter, so that its daemon knows that this directory is the root of your project. \nIf this is not the root of your project, delete this file and its `.easyJupyter_cache` directory. And add a `.easyJupyterConfig` file to the root of your project."
 
+
 def get_project_root():
     """
     Traverse up to find the project root by looking for '.easyJupyterConfig' file.
@@ -15,13 +16,13 @@ def get_project_root():
     """
     original_dir = Path.cwd().resolve()
     current_dir = original_dir
-    
+
     # Pass 1: Look for existing .easyJupyterConfig
     while current_dir.parent != current_dir:
         if (current_dir / ".easyJupyterConfig").exists():
             return current_dir
         current_dir = current_dir.parent
-    
+
     # Pass 2: Fallback to identifying common project roots (.git, pyproject.toml)
     current_dir = original_dir
     while current_dir.parent != current_dir:
@@ -66,7 +67,6 @@ def cleanup_cache(project_root, shadow_dir, console):
                 # Reconstruct original notebook path
                 rel_to_cache = os.path.relpath(cache_file_path, shadow_dir)
                 og_nb_path = project_root / rel_to_cache.replace(".py", ".ipynb")
-
 
                 if not og_nb_path.exists():
                     os.remove(cache_file_path)
@@ -126,9 +126,14 @@ def print_nb_update_report(shadow_dir, console, updated_notebooks):
         _render_table(console, updated_notebooks)
 
 
-def sync_all(project_root, shadow_dir, console, updated_notebooks, loader_class):
+def sync_all(
+    project_root, shadow_dir, console, updated_notebooks, loader_class, force_sync=False
+):
     """
     When user updates a Notebook sync it to its cache file.
+
+    Args:
+        force_sync: A flag that can be passed with --sync to forcefully rebuild all cache files by bypassing the timestamp freshness check.
     """
     root_dir = project_root
     updated_notebooks.clear()  # clear list in-place to affect the global instance
@@ -137,16 +142,20 @@ def sync_all(project_root, shadow_dir, console, updated_notebooks, loader_class)
     for root, _, files in os.walk(root_dir):
         if str(shadow_dir) in root:
             continue  # skip the cache dir
-        all_nb.extend([
-            # os.path.join(root, f) for f in files if f.endswith(".ipynb")
-            Path(root) / f for f in files if f.endswith(".ipynb")
-            ])
+        all_nb.extend(
+            [
+                # os.path.join(root, f) for f in files if f.endswith(".ipynb")
+                Path(root) / f
+                for f in files
+                if f.endswith(".ipynb")
+            ]
+        )
 
     if all_nb:
         for nb_path in track(all_nb, description="[cyan]Syncing Notebooks..."):
             # Create a loader instance for each notebook to trigger the sync
             loader = loader_class(nb_path)
-            loader.get_code()
+            loader.get_code(force_sync)
         console.print("[bold green]Sync Complete![/bold green]")
     else:
         console.print("[yellow]No notebooks updated![/yellow]")
@@ -157,8 +166,9 @@ def sync_all(project_root, shadow_dir, console, updated_notebooks, loader_class)
 def stop_daemon(shadow_dir, console):
     """Stops the background daemon process gracefully using its PID lock file."""
     import signal
+
     pid_file = shadow_dir / "watcher.pid"
-    
+
     if not pid_file.exists():
         console.print("[yellow]Watcher daemon is not currently running.[/yellow]")
         return
@@ -166,13 +176,17 @@ def stop_daemon(shadow_dir, console):
     try:
         with open(pid_file, "r") as f:
             pid = int(f.read().strip())
-        
+
         # Send termination signal to the background process
         os.kill(pid, signal.SIGTERM)
         os.remove(pid_file)
-        console.print(f"[bold green]Watcher daemon (PID {pid}) stopped successfully.[/bold green]")
+        console.print(
+            f"[bold green]Watcher daemon (PID {pid}) stopped successfully.[/bold green]"
+        )
     except ProcessLookupError:
         os.remove(pid_file)
-        console.print("[yellow]Daemon process not found. Cleaned up stale PID file.[/yellow]")
+        console.print(
+            "[yellow]Daemon process not found. Cleaned up stale PID file.[/yellow]"
+        )
     except Exception as e:
         console.print(f"[bold red]Failed to stop daemon:[/bold red] {e}")

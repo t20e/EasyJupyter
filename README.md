@@ -10,7 +10,7 @@ Key Benefits:
 - Zero Clutter: Generated cache files are stored in a hidden `.easyJupyter_cache` directory, keeping your workspace clean.
 - Custom ignore syntax to ignore exploratory cells, or lines of code.
 
-**How It Works:** When EasyJupyter is first imported within a project, it initiates a single, detached background daemon for that specific project. This daemon is tied to your project's root (specifically, the generated `.easyJupyter_cache/watcher.pid` file) and monitors only the notebooks within it. This per-project design ensures that different projects can have their own daemons completely isolated and do not interfere with each other. If the daemon for a project is not already running, it will be started automatically the next time you import EasyJupyter within that project's environment.
+**How It Works:** When EasyJupyter is first imported within a project, it initiates a single, detached background daemon for that specific project. This daemon is tied to your project's root (specifically, a generated `.easyJupyter_cache/watcher.pid` file) and monitors only the notebooks within it. This per-project design ensures that different projects can have their own daemons completely isolated and do not interfere with each other. If the daemon for a project is not already running, it will be started automatically the next time you import EasyJupyter within that project's environment. The daemon's only job is to detect saves in the notebooks and update the cache files.
 
 ## Table of Contents
 
@@ -51,7 +51,7 @@ pip install easyjupyter
 In your project's entry point (e.g., `main.py`) and in any Jupyter Notebooks where you want the daemon to be active or when importing from other notebooks, import the library at the very top of the file:
 
 ```python
-import EasyJupyter # Import at the very top of the file
+import easyjupyter # Import at the very top of the file
 from my_notebook import Class, Function_name
 ```
 
@@ -82,7 +82,7 @@ from my_notebook import Class, Function_name
 >
 > - Examples:
 >   - [example_nested_project](https://github.com/t20e/EasyJupyter/tree/main/example_nested_project). Note run `main.py` from inside ./example_nested_project, also for VSC's Pylance to kick in, open a new VSC window with ./example_nested_project as root, and follow VSC Pylance Intellisense Setup below.
->   - A [larger project example](https://github.com/t20e/How_to_build_an_LLM)
+>   - A [larger project example](https://github.com/t20e/Build_an_LLM)
 
 ### Arguments
 
@@ -90,11 +90,18 @@ from my_notebook import Class, Function_name
 
 #### Sync All Notebooks
 
-- Sync all notebooks to the cache, run:
-  - Do this only if your cache is empty and you have existing notebooks, not every time you update a notebook.
+- To sync all notebooks to the cache, run:
+  - This is not necessary for every time you update a notebook!
+  - When sharing code with others like a Git repo, you don't have to commit the `.easyJupyter_cache` folder. Instead, instruct the user to run:
 
     ```bash
-    easyjupyter --sync
+    easyjupyter --sync 
+    ```
+
+  - Or, if you want to forcefully rebuild all cache files by bypassing the timestamp freshness check, run:
+
+    ```bash
+    easyjupyter --sync --force
     ```
 
 #### Cache Cleanup
@@ -119,7 +126,7 @@ from my_notebook import Class, Function_name
 
     ```bash
     easyjupyter --stop
-    # Or hard stop: `pkill -f EasyJupyter.watcher`
+    # Or hard stop: `pkill -f easyjupyter.watcher`
     ```
 
 ### VSC Pylance Intellisense Setup
@@ -132,7 +139,10 @@ VS Code's Pylance intellisense will not natively work with notebooks, or the hid
     mkdir -p .vscode && echo '{
         "python.analysis.extraPaths": [
             "./.easyJupyter_cache"
-        ]
+        ],
+        "search.exclude": { // Excludes the cache directory from VSC search
+            "**/.easyJupyter_cache/**": true
+        }
     }' > .vscode/settings.json
     ```
 
@@ -141,14 +151,17 @@ VS Code's Pylance intellisense will not natively work with notebooks, or the hid
     ```json
     "python.analysis.extraPaths": [
         "./.easyJupyter_cache"
-    ]
+    ],
+    "search.exclude": { // Excludes the cache directory from VSC search
+        "**/.easyJupyter_cache/**": true
+    }
     ```
 
 3. Make sure that in VSC you are selecting the environment that has EasyJupyter installed. For notebooks, VSC will prompt you to select the environment when you run a cell in a notebook. For .py files, you can manually select the environment in the bottom right corner of VSC. And you have the VSC window open in the root of your project.
 
 ### Resolving Errors
 
-If any issues occur with the watcher daemon, manually run it with: `python -m EasyJupyter.watcher` (note that this spawns the daemon in the foreground for debugging). If the daemon is already running in the background, you will need to delete the `.easyJupyter_cache/watcher.pid` file first.
+If any issues occur with the watcher daemon, manually run it with: `python -m easyjupyter.watcher` (note that this spawns the daemon in the foreground for debugging). If the daemon is already running in the background, you will need to delete the `.easyJupyter_cache/watcher.pid` file first.
 
 You can always check the background daemon logs inside `.easyJupyter_cache/watcher.log`.
 
@@ -161,4 +174,4 @@ You can always check the background daemon logs inside `.easyJupyter_cache/watch
 - Errors:
   - Did you forget to use ignore syntax in the notebook that you are trying to import?
 - For VSC intellisense, did you add the extraPaths to your settings.json
-- If AI coding assistants are suggesting edits in the hidden cache files, add `.easyJupyter_cache/` to that AI's config ignore files e.g., `.cursorignore`..
+- If AI coding assistants are suggesting edits in the hidden cache files, add `.easyJupyter_cache/` to that AI's config ignore files e.g., `.cursorignore`, `.geminiignore`, `.aiexclude`...

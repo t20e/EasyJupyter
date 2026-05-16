@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "EasyJupyter"
-version = "0.1.5" # NOTE: This is a required field, leave it as is, no need to change it, the Github workflow will automatically take care of version using the tag you set for commits!
+version = "0.1.7" # NOTE: This is a required field, leave it as is, no need to change it, the Github workflow will automatically take care of version using the tag you set for commits!
 
 description = "EasyJupyter allows you to effortlessly integrate your Jupyter Notebook code into any Python project or other notebooks."
 readme = "README.md"
@@ -27,10 +27,10 @@ dependencies = [
 
 [project.scripts]
 # This maps the 'easyjupyter' terminal command to the main() function in cli.py
-easyjupyter = "EasyJupyter.cli:main"
+easyjupyter = "easyjupyter.cli:main"
 
 [tool.poetry]
 packages = [
     # Tell poetry where to find the source code
-    { include = "EasyJupyter", from = "src" },
+    { include = "easyjupyter", from = "src" },
 ]

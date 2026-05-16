@@ -18,11 +18,29 @@ PID_FILE = Path(SHADOW_DIR) / "watcher.pid"
 
 
 class AutoSyncHandler(FileSystemEventHandler):
+    def __init__(self):
+        self.last_modified = {}
+        self.debounce_secs = 0.25 # Debounce mechanism to throttle the execution rate.
+        # NOTE: It executes on the first save and locks subsequent events for 0.25 seconds (milliseconds).
+        #       While this handles manual human saves well, automated tools (like code formatters) may 
+        #       trigger a second save within this 0.25s lockout window
+        #       Because the second save falls inside the lockout, it is ignored, leaving the cache out 
+        #       of sync with the final file state.
+
     def on_modified(self, event):
-        if ".easyJupyter_cache" in event.src_path:
-            return
         if event.is_directory or not event.src_path.endswith(".ipynb"):
             return
+    
+        # Ignore cache and hidden jupyter checkpoint files
+        if ".easyJupyter_cache" in event.src_path or ".ipynb_checkpoints" in event.src_path:
+            return
+
+        # Debounce logic to prevent thrashing on multi-event saves
+        current_time = time.time()
+        if event.src_path in self.last_modified:
+            if current_time -self.last_modified[event.src_path] < self.debounce_secs:
+                return
+        self.last_modified[event.src_path] = current_time
 
         try:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")

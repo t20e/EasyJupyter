@@ -110,7 +110,6 @@ jobs: # Each job runs on a VM
         runs-on: ubuntu-latest
         environment:
             name: pypi
-            # TODO make sure this works when deploying
             url: https://pypi.org/project/EasyJupyter/ 
         permissions:
             id-token: write

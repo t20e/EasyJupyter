@@ -1,5 +1,7 @@
 # Not For You | Dev Notes
 
+## Local Development
+
 - When updating the daemon, we need to clear the old cache and restart the daemon.
 
     ```bash
@@ -7,9 +9,8 @@
     easyjupyter --stop 
 
     # Or below 3 lines
-    pkill -f EasyJupyter.watcher
-    rm -rf .easyJupyter_cache
-    easyjupyter --sync
+    pkill -f easyJupyter.watcher
+    easyjupyter --sync --force
     ```
 
 - Setup the development environment:
@@ -32,45 +33,66 @@
     poetry install
     ```
 
-- When developing install the library locally from the pyproject.toml (make sure the env was creating using above commands!): `pip install -e .`
-- **Distributing to PyPI:**
-  - Releases are automated via GitHub Actions *(CI/CD)*. To publish a new release, tag a commit with the new version number (e.g., `git tag 0.1.2` and `git push --tags`), or do it in Github Desktop.
-    1. **Run:**
+- When **developing** install the library locally from the pyproject.toml (make sure the env was creating using above commands!):
 
-      ```bash
-          # Ensure your `poetry.lock` is up-to-date, run:
-          poetry lock
-          # Check for errors:
-          poetry check
-      ```
+    ```bash
+    # Run from the root of the project
+    pip install -e . # Install the packages with the updated local code
+    cd example_nested_project
+    easyjupyter --stop # Stops the daemon thats running the old version
+    # Maybe also reload VSC window that has the nested examples
+    easyjupyter --sync --force
+    ```
 
-     2. Then commit and add the new tag version, github actions will automatically build and publish the package to PyPI!
+## Distributing to PyPI
 
-  - **Testing Before Releasing Locally (on TestPyPI):**
-    1. First-Time Setup:
-        - Create an API token on TestPyPI. Note: [https://pypi.org/](https://pypi.org/) and [https://test.pypi.org/](https://test.pypi.org/) are not the same, have a different login for each!
-        - Configure Poetry with the repository URL and your token:
+### Run Tests First
 
-          ```bash
-          # 1. Tell Poetry where TestPyPI is
-          poetry config repositories.testpypi https://test.pypi.org/legacy/
-          # 2. Provide your token for authentication
-          poetry config pypi-token.testpypi <paste-your-testpypi-token-here>
-          ```
+```bash
+pytest
+```
 
-    2. Manually set the version for the test build, remember to increment it or else it will fail to publish to TestPyPI:
+### Testing Before Releasing Locally (on TestPyPI)
 
-        ```bash
-        poetry version 0.1.3
-        ```
+- First-Time Setup:
+  - Create an API token on TestPyPI. Note: [https://pypi.org/](https://pypi.org/) and [https://test.pypi.org/](https://test.pypi.org/) are not the same, have a different login for each!
+  - Configure Poetry with the repository URL and your token:
 
-    3. Run the `Run` bullet point from above.
-    4. Build the package:
+    ```bash
+    # 1. Tell Poetry where TestPyPI is
+    poetry config repositories.testpypi https://test.pypi.org/legacy/
+    # 2. Provide your token for authentication
+    poetry config pypi-token.testpypi <paste-your-testpypi-token-here>
+    ```
 
-        ```bash
-        # Build the package:
-        # poetry build # This is only for local, the Github workflow handles the building when publishing to PyPI
-        ```
+- Publish to TestPyPI:
+  - Manually set the version for the test build, remember to increment it or else it will fail to publish to TestPyPI:
 
-    5. Publish to TestPyPI:
-        - `poetry publish -r testpypi`
+    ```bash
+    poetry version <example=0.1.3>
+    poetry lock
+    # Check for errors:
+    poetry check
+    ```
+
+  - Build the package & publish to TestPyPI:
+
+    ```bash
+    poetry build # This is only for local, the Github workflow handles the building when publishing to PyPI
+    poetry publish -r testpypi
+    ```
+
+### Publishing to PyPI
+
+Releases are automated via GitHub Actions *(CI/CD)*. To publish a new release, tag a commit with the new version number (e.g., `git tag 0.1.2` and `git push --tags`), or do it in Github Desktop.
+
+**Run:**
+
+```bash
+    # Ensure your `poetry.lock` is up-to-date, run:
+    poetry lock
+    # Check for errors:
+    poetry check
+```
+
+- Then commit and add a tag version, github actions will automatically build and publish the package to PyPI!
